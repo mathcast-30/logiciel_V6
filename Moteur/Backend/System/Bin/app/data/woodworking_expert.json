@@ -1,0 +1,32 @@
+[
+    {
+        "id": "drawer_slides",
+        "title": "Installation des Coulisses de Tiroir",
+        "keywords": "coulisse, tiroir, jeu, latéral, fond, montage",
+        "content": "Pour des coulisses à galets standard, prévoyez un jeu latéral de 12.7 mm (1/2 pouce) de chaque côté du tiroir. Pour des coulisses invisibles (type Blum Tandem), le tiroir doit être plus étroit de 21 mm que l'ouverture du caisson. Pensez à déduire l'épaisseur du fond si celui-ci est cloué sous le tiroir."
+    },
+    {
+        "id": "cabinet_gaps",
+        "title": "Jeux de Fonctionnement des Portes",
+        "keywords": "porte, jeu, charnière, façade, recouvrement",
+        "content": "Pour une porte en applique, prévoyez un jeu de 2 mm tout autour de la façade. Pour deux portes battantes se rejoignant au centre, laissez 3 mm entre les deux. Utilisez des charnières invisibles avec réglage 3D pour ajuster ces jeux après la pose."
+    },
+    {
+        "id": "material_thickness",
+        "title": "Choix des Épaisseurs de Panneaux",
+        "keywords": "épaisseur, mélaminé, mdf, structure, fond",
+        "content": "Le standard pour les caissons de cuisine est de 18 mm. Pour les fonds de meubles, un panneau de 8 mm rainuré dans les montants offre une excellente rigidité. Pour les étagères de grande portée (> 800 mm), préférez du 22 mm ou doublez l'étagère pour éviter le cintrage."
+    },
+    {
+        "id": "assembly_types",
+        "title": "Types d'Assemblage Courants",
+        "keywords": "tourillon, lamello, domino, vis, confirmation",
+        "content": "L'assemblage par tourillons (8x30 mm) est invisible et robuste. Le Lamello est plus rapide et permet un réglage latéral lors du collage. Pour les meubles démontables, utilisez des excentriques ou des vis de confirmation de 7x50 mm."
+    },
+    {
+        "id": "dovetails",
+        "title": "Queues d'aronde et assemblages à peigne",
+        "keywords": "queue d'aronde, peigne, tiroir, massif, assemblage",
+        "content": "Pour un tiroir en bois massif, l'assemblage à queues d'aronde est le plus noble. Si vous utilisez une machine à entures, prévoyez une surcote de 0.5 mm sur les tenons pour un arasage parfait après collage. L'épaisseur des côtés doit idéalement être entre 12 et 15 mm."
+    }
+]

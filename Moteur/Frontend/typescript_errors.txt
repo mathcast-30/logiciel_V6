@@ -1,0 +1,31 @@
+src/components/Optimize/index.ts(8,35): error TS2459: Module '"./RawWoodConfigPanel"' declares 'RawWoodParams' locally, but it is not exported.
+src/pages/Optimize.tsx(10,5): error TS6133: 'Loader2' is declared but its value is never read.
+src/pages/Optimize.tsx(11,5): error TS6133: 'Layout' is declared but its value is never read.
+src/pages/Optimize.tsx(12,5): error TS6133: 'Maximize2' is declared but its value is never read.
+src/pages/Optimize.tsx(13,5): error TS6133: 'Save' is declared but its value is never read.
+src/pages/Optimize.tsx(14,5): error TS6133: 'Trash2' is declared but its value is never read.
+src/pages/Optimize.tsx(15,5): error TS6133: 'RefreshCw' is declared but its value is never read.
+src/pages/Optimize.tsx(16,5): error TS6133: 'FileText' is declared but its value is never read.
+src/pages/Optimize.tsx(17,14): error TS6133: 'ImageIcon' is declared but its value is never read.
+src/pages/Optimize.tsx(18,5): error TS6133: 'History' is declared but its value is never read.
+src/pages/Optimize.tsx(19,5): error TS6133: 'Search' is declared but its value is never read.
+src/pages/Optimize.tsx(20,5): error TS6133: 'Filter' is declared but its value is never read.
+src/pages/Optimize.tsx(21,5): error TS6133: 'ArrowUpRight' is declared but its value is never read.
+src/pages/Optimize.tsx(22,5): error TS6133: 'Info' is declared but its value is never read.
+src/pages/Optimize.tsx(23,5): error TS6133: 'ChevronDown' is declared but its value is never read.
+src/pages/Optimize.tsx(24,5): error TS6133: 'Plus' is declared but its value is never read.
+src/pages/Optimize.tsx(25,5): error TS6133: 'Box' is declared but its value is never read.
+src/pages/Optimize.tsx(26,5): error TS6133: 'Square' is declared but its value is never read.
+src/pages/Optimize.tsx(29,5): error TS6133: 'ChevronLeft' is declared but its value is never read.
+src/pages/Optimize.tsx(29,18): error TS6133: 'ChevronRight' is declared but its value is never read.
+src/pages/Optimize.tsx(30,5): error TS6133: 'CheckCircle2' is declared but its value is never read.
+src/pages/Optimize.tsx(44,5): error TS6133: 'PolygonViewer' is declared but its value is never read.
+src/pages/Optimize.tsx(93,12): error TS6133: 'isValidating' is declared but its value is never read.
+src/pages/Optimize.tsx(94,12): error TS6133: 'isValidated' is declared but its value is never read.
+src/pages/Optimize.tsx(408,11): error TS6133: 'handleValidate' is declared but its value is never read.
+src/pages/Optimize.tsx(519,11): error TS6133: 'navigatePanel' is declared but its value is never read.
+src/pages/Optimize.tsx(1121,10): error TS6133: 'CuttingPlanViewer' is declared but its value is never read.
+src/pages/StepImport.tsx(2,66): error TS6133: 'AlertTriangle' is declared but its value is never read.
+src/pages/StepImport.tsx(2,106): error TS6133: 'Edit3' is declared but its value is never read.
+src/pages/StepImport.tsx(313,65): error TS2339: Property 'material_id' does not exist on type 'ExtractedPart'.
+src/pages/StepImport.tsx(314,94): error TS2345: Argument of type '"material_id"' is not assignable to parameter of type 'keyof ExtractedPart'.

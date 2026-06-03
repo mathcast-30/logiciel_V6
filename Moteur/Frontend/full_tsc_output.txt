@@ -1,0 +1,29 @@
+src/components/Optimize/index.ts(8,35): error TS2459: Module '"./RawWoodConfigPanel"' declares 'RawWoodParams' locally, but it is not exported.
+src/pages/Optimize.tsx(5,5): error TS6133: 'Loader2' is declared but its value is never read.
+src/pages/Optimize.tsx(6,5): error TS6133: 'Layout' is declared but its value is never read.
+src/pages/Optimize.tsx(7,5): error TS6133: 'Save' is declared but its value is never read.
+src/pages/Optimize.tsx(8,5): error TS6133: 'Trash2' is declared but its value is never read.
+src/pages/Optimize.tsx(9,5): error TS6133: 'RefreshCw' is declared but its value is never read.
+src/pages/Optimize.tsx(10,5): error TS6133: 'Search' is declared but its value is never read.
+src/pages/Optimize.tsx(11,5): error TS6133: 'ChevronDown' is declared but its value is never read.
+src/pages/Optimize.tsx(12,5): error TS6133: 'Plus' is declared but its value is never read.
+src/pages/Optimize.tsx(13,5): error TS6133: 'Box' is declared but its value is never read.
+src/pages/Optimize.tsx(18,5): error TS6133: 'ChevronLeft' is declared but its value is never read.
+src/pages/Optimize.tsx(18,18): error TS6133: 'ChevronRight' is declared but its value is never read.
+src/pages/Optimize.tsx(19,5): error TS6133: 'CheckCircle2' is declared but its value is never read.
+src/pages/Optimize.tsx(33,5): error TS6133: 'PolygonViewer' is declared but its value is never read.
+src/pages/Optimize.tsx(82,12): error TS6133: 'isValidating' is declared but its value is never read.
+src/pages/Optimize.tsx(83,12): error TS6133: 'isValidated' is declared but its value is never read.
+src/pages/Optimize.tsx(397,11): error TS6133: 'handleValidate' is declared but its value is never read.
+src/pages/Optimize.tsx(508,11): error TS6133: 'navigatePanel' is declared but its value is never read.
+src/pages/Optimize.tsx(543,22): error TS2552: Cannot find name 'Settings'. Did you mean 'settings'?
+src/pages/Optimize.tsx(551,26): error TS2552: Cannot find name 'Settings'. Did you mean 'settings'?
+src/pages/Optimize.tsx(716,42): error TS2304: Cannot find name 'Wrench'.
+src/pages/Optimize.tsx(744,42): error TS2552: Cannot find name 'Settings'. Did you mean 'settings'?
+src/pages/Optimize.tsx(751,34): error TS2304: Cannot find name 'BarChart3'.
+src/pages/Optimize.tsx(844,54): error TS2304: Cannot find name 'Package'.
+src/pages/Optimize.tsx(979,112): error TS2304: Cannot find name 'Wrench'.
+src/pages/Optimize.tsx(990,44): error TS2304: Cannot find name 'Rocket'.
+src/pages/Optimize.tsx(1000,34): error TS2304: Cannot find name 'AlertCircle'.
+src/pages/Optimize.tsx(1018,38): error TS2304: Cannot find name 'Wrench'.
+src/pages/Optimize.tsx(1110,10): error TS6133: 'CuttingPlanViewer' is declared but its value is never read.

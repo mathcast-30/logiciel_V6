@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+rectpack
+ezdxf
+reportlab
+qrcode
+python-multipart
+openpyxl
+pillow
+requests
+aiohttp
+beautifulsoup4

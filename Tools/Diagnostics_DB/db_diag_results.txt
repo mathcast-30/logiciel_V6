@@ -1,0 +1,10 @@
+
+Checking database: C:\Users\Mathe\Documents\Matheo\passion\menuiserie\optimisation\different script\logiciel_V4\Moteur\UserData\BaseDeDonnees\opticut.db
+Size: 404.00 KB
+Tables: clients, materials, stock, projects, optimization_results, quotes, quote_items, edge_bands, templates, hardware, hardware_assemblies, suppliers, supplier_materials, orders, price_history, order_items, step_models, sqlite_sequence, parts
+Number of projects: 3
+
+Checking database: C:\Users\Mathe\Documents\Matheo\passion\menuiserie\optimisation\different script\logiciel_V4\Moteur\UserData\BaseDeDonnees\opticut.db.old
+Size: 220.00 KB
+Tables: clients, materials, stock, projects, parts, optimization_results, quotes, quote_items, edge_bands, templates, hardware, hardware_assemblies, suppliers, supplier_materials, orders, order_items, price_history
+Number of projects: 1

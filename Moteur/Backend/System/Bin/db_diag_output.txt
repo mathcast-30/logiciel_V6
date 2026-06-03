@@ -1,0 +1,42 @@
+--- Checking C:\Users\Mathe\Documents\Matheo\passion\menuiserie\optimisation\different script\logiciel_V4\Moteur\UserData\BaseDeDonnees\opticut.db ---
+Size: 413696 bytes
+Tables: ['clients', 'materials', 'stock', 'projects', 'optimization_results', 'quotes', 'quote_items', 'edge_bands', 'templates', 'hardware', 'hardware_assemblies', 'suppliers', 'supplier_materials', 'orders', 'price_history', 'order_items', 'step_models', 'sqlite_sequence', 'parts']
+Table 'clients': 2 rows
+Table 'materials': 1 rows
+Table 'stock': 1 rows
+Table 'projects': 3 rows
+Table 'optimization_results': 5 rows
+Table 'quotes': 0 rows
+Table 'quote_items': 0 rows
+Table 'edge_bands': 0 rows
+Table 'templates': 2 rows
+Table 'hardware': 4 rows
+Table 'hardware_assemblies': 4 rows
+Table 'suppliers': 2 rows
+Table 'supplier_materials': 386 rows
+Table 'orders': 0 rows
+Table 'price_history': 0 rows
+Table 'order_items': 0 rows
+Table 'step_models': 2 rows
+Table 'sqlite_sequence': 2 rows
+Table 'parts': 21 rows
+--- Checking C:\Users\Mathe\Documents\Matheo\passion\menuiserie\optimisation\different script\logiciel_V4\Moteur\UserData\BaseDeDonnees\opticut.db.old ---
+Size: 225280 bytes
+Tables: ['clients', 'materials', 'stock', 'projects', 'parts', 'optimization_results', 'quotes', 'quote_items', 'edge_bands', 'templates', 'hardware', 'hardware_assemblies', 'suppliers', 'supplier_materials', 'orders', 'order_items', 'price_history']
+Table 'clients': 1 rows
+Table 'materials': 1 rows
+Table 'stock': 1 rows
+Table 'projects': 1 rows
+Table 'parts': 6 rows
+Table 'optimization_results': 3 rows
+Table 'quotes': 0 rows
+Table 'quote_items': 0 rows
+Table 'edge_bands': 0 rows
+Table 'templates': 2 rows
+Table 'hardware': 0 rows
+Table 'hardware_assemblies': 0 rows
+Table 'suppliers': 0 rows
+Table 'supplier_materials': 0 rows
+Table 'orders': 0 rows
+Table 'order_items': 0 rows
+Table 'price_history': 0 rows

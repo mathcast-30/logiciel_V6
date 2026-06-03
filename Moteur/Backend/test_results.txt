@@ -1,0 +1,43 @@
+
+=== Testing Rotation & Simplified Logging ===
+  Attempting to place piece 1 (100.0x210.0) on board 0 (height 200)
+  ignore_grain_direction is True
+
+--- DEBUG OPTIMISATION MASSIF ---
+PI╚CES (1):
+  - Piece 1: 100.0x210.0 mm (Area: 21000.0 mm▓)
+PLANCHES (1):
+  - Board 0: 1000.0x200.0 mm (Usable Area: 188100.0 mm▓)
+---------------------------------
+
+  Success: True
+  Pieces placed: 1
+  [PASS] Piece placed successfully after rotation!
+  Grain warnings found: 0
+
+=== Testing Log Duplication (ignore_grain_direction=False) ===
+
+--- DEBUG OPTIMISATION MASSIF ---
+PI╚CES (1):
+  - Piece 2: 50.0x50.0 mm (Area: 2500.0 mm▓)
+PLANCHES (2):
+  - Board 0: 1000.0x200.0 mm (Usable Area: 188100.0 mm▓)
+  - Board 1: 1000.0x200.0 mm (Usable Area: 188100.0 mm▓)
+---------------------------------
+
+  Grain warnings found: 2
+    - Piece 2: strict grain alignment failed on board 0. Maintaining original grain constraints.
+    - Could not place piece 2: Grain alignment impossible
+  [PASS] Log deduplication works (1 constraint warning + 1 strategy reason)
+
+=== Testing Detailed Failure Reasons ===
+
+--- DEBUG OPTIMISATION MASSIF ---
+PI╚CES (1):
+  - Piece 20: 500.0x500.0 mm (Area: 250000.0 mm▓)
+PLANCHES (1):
+  - Board 10: 100.0x100.0 mm (Usable Area: 8100.0 mm▓)
+---------------------------------
+
+  Log entry: Could not place piece 20: Piece 500x500 exceeds all board dimensions.
+  [PASS] Detected piece size failure reason!

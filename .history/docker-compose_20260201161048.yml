@@ -1,0 +1,152 @@
+version: '3.8'
+
+# OptiCut Pro V4 - Docker Compose Configuration
+# Advanced Storage Architecture with PostgreSQL
+
+services:
+  # ═══════════════════════════════════════════════════════════════════
+  # POSTGRESQL - ADVANCED CONFIGURATION
+  # ═══════════════════════════════════════════════════════════════════
+  postgres-opticut:
+    image: postgres:16-alpine
+    container_name: opticut-postgres
+    hostname: opticut-db
+    
+    # ═══════════════════════════════════════════════════════════════════
+    # ENVIRONMENT VARIABLES
+    # ═══════════════════════════════════════════════════════════════════
+    environment:
+      POSTGRES_DB: opticut_pro
+      POSTGRES_USER: opticut_user
+      POSTGRES_PASSWORD: SecureOpticut2024!#
+      POSTGRES_INITDB_ARGS: >
+        -c wal_level=replica
+        -c archive_mode=on
+        -c archive_command='cp %p /var/lib/postgresql/wal_archive/%f'
+        -c max_wal_senders=10
+        -c wal_keep_size=1024MB
+        -c hot_standby=on
+        -c shared_preload_libraries=pg_stat_statements
+        -c data_checksums=on
+        -c full_page_writes=on
+    
+    # ═══════════════════════════════════════════════════════════════════
+    # PORTS
+    # ═══════════════════════════════════════════════════════════════════
+    ports:
+      - "5432:5432"
+    
+    # ═══════════════════════════════════════════════════════════════════
+    # VOLUMES - PERSISTENT DATA
+    # ═══════════════════════════════════════════════════════════════════
+    volumes:
+      # Volume nommé pour les données PostgreSQL
+      - postgres-data:/var/lib/postgresql/data
+      
+      # Volume pour les archives WAL
+      - postgres-wal:/var/lib/postgresql/wal_archive
+      
+      # Script d'initialisation
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      
+      # Configuration PostgreSQL
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      
+      # Répertoire de sauvegarde (optionnel)
+      - ./backups:/var/lib/postgresql/backups
+    
+    # ═══════════════════════════════════════════════════════════════════
+    # COMMAND & STARTUP
+    # ═══════════════════════════════════════════════════════════════════
+    command:
+      - "postgres"
+      - "-c"
+      - "config_file=/etc/postgresql/postgresql.conf"
+    
+    # ═══════════════════════════════════════════════════════════════════
+    # NETWORKING
+    # ═══════════════════════════════════════════════════════════════════
+    networks:
+      - opticut-network
+    
+    # ═══════════════════════════════════════════════════════════════════
+    # LIFECYCLE
+    # ═══════════════════════════════════════════════════════════════════
+    restart: unless-stopped
+    
+    # ═══════════════════════════════════════════════════════════════════
+    # HEALTH CHECK
+    # ═══════════════════════════════════════════════════════════════════
+    healthcheck:
+      test: 
+        - "CMD-SHELL"
+        - "pg_isready -U opticut_user -d opticut_pro"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PGADMIN - OPTIONAL ADMIN INTERFACE
+  # ═══════════════════════════════════════════════════════════════════
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: opticut-pgadmin
+    
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@opticut.local
+      PGADMIN_DEFAULT_PASSWORD: AdminPassword123!@#
+    
+    ports:
+      - "5050:80"
+    
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    
+    networks:
+      - opticut-network
+    
+    restart: unless-stopped
+    
+    depends_on:
+      - postgres-opticut
+
+# ═══════════════════════════════════════════════════════════════════
+# VOLUMES - PERSISTENT STORAGE
+# ═══════════════════════════════════════════════════════════════════
+volumes:
+  # PostgreSQL Data Volume
+  # Stockage des fichiers de base de données
+  postgres-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${OPTICUT_DATA_PATH:-./data/postgres}
+  
+  # PostgreSQL WAL Archive Volume
+  # Stockage des Write-Ahead Logs pour recovery
+  postgres-wal:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${OPTICUT_WAL_PATH:-./data/wal_archive}
+  
+  # PgAdmin Data Volume
+  pgadmin-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PGADMIN_DATA_PATH:-./data/pgadmin}
+
+# ═══════════════════════════════════════════════════════════════════
+# NETWORKS - SERVICE COMMUNICATION
+# ═══════════════════════════════════════════════════════════════════
+networks:
+  opticut-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
