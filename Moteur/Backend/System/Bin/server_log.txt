@@ -1,0 +1,8 @@
+WARNING:StepParser:pythonOCC not found. STEP import will be disabled.
+INFO:     Started server process [11852]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+[DATABASE] Using file: C:\Users\Mathe\Documents\Matheo\passion\menuiserie\optimisation\different script\logiciel_V4\Moteur\UserData\BaseDeDonnees\opticut.db
+ERROR:    [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8000): une seule utilisation de chaque adresse de socket (protocole/adresse r�seau/port) est habituellement autoris�e
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.

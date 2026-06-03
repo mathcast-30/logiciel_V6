@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="H Menuiserie - Application atelier pour gestion stock et découpes">
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="H Menuiserie">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- QR Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <title>H Menuiserie - Atelier</title>
+</head>
+
+<body>
+    <!-- Offline Banner -->
+    <div id="offline-banner" class="offline-banner hidden">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="1" y1="1" x2="23" y2="23"></line>
+            <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+            <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+            <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+            <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+            <line x1="12" y1="20" x2="12.01" y2="20"></line>
+        </svg>
+        <span>Mode Hors-Ligne</span>
+    </div>
+
+    <!-- Sync Queue Banner -->
+    <div id="sync-banner" class="sync-banner hidden">
+        <svg class="icon spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+        <span id="sync-count">0 actions en attente</span>
+    </div>
+
+    <!-- Update Prompt -->
+    <div id="update-prompt" class="update-prompt hidden">
+        <div class="update-content">
+            <p id="update-message">Nouvelle version disponible !</p>
+            <div class="update-actions">
+                <button id="update-btn" class="btn btn-primary">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                    </svg>
+                    Mettre à jour
+                </button>
+                <button id="update-close" class="btn btn-secondary">Plus tard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <main id="app-content" class="main-content">
+
+        <!-- Projects View -->
+        <section id="view-projects" class="view active">
+            <header class="page-header">
+                <h1 class="page-title">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    Projets
+                </h1>
+            </header>
+            <div id="projects-list" class="card-list">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Scanner View -->
+        <section id="view-scanner" class="view">
+            <div class="scanner-container">
+                <div id="qr-reader" class="qr-reader"></div>
+                <div class="scanner-overlay">
+                    <div class="scanner-frame"></div>
+                    <div class="scanner-line"></div>
+                </div>
+                <p class="scanner-hint">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <rect x="7" y="7" width="3" height="9"></rect>
+                        <rect x="14" y="7" width="3" height="5"></rect>
+                    </svg>
+                    Scannez le QR code sur la planche
+                </p>
+            </div>
+
+            <!-- Scan Result Modal -->
+            <div id="scan-modal" class="modal hidden">
+                <div class="modal-backdrop"></div>
+                <div class="modal-content">
+                    <button id="modal-close" class="modal-close" aria-label="Fermer">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+
+                    <div class="result-header">
+                        <div class="result-icon">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line>
+                                <path
+                                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                                </path>
+                                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                            </svg>
+                        </div>
+                        <div>
+                            <div id="result-material" class="result-title">Matériau</div>
+                            <div id="result-id" class="result-subtitle">Stock #0</div>
+                        </div>
+                    </div>
+
+                    <div class="result-section">
+                        <div class="result-section-title">Détails Techniques</div>
+                        <div class="result-info-row">
+                            <span class="result-info-label">Dimensions</span>
+                            <span id="result-dimensions" class="result-info-value">0 x 0 mm</span>
+                        </div>
+                        <div class="result-info-row">
+                            <span class="result-info-label">Épaisseur</span>
+                            <span id="result-thickness" class="result-info-value">0 mm</span>
+                        </div>
+                        <div class="result-info-row">
+                            <span class="result-info-label">Quantité</span>
+                            <span id="result-quantity" class="result-info-value">0</span>
+                        </div>
+                        <div class="result-info-row">
+                            <span class="result-info-label">Type</span>
+                            <span id="result-type" class="result-info-value">Panneau</span>
+                        </div>
+                    </div>
+
+                    <div id="result-project-section" class="result-section hidden">
+                        <div class="result-section-title">Projet assigné</div>
+                        <div id="result-project-link" class="result-project-link">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
+                                </path>
+                            </svg>
+                            <div>
+                                <div id="result-project-name" class="result-project-name">Projet</div>
+                                <div class="result-project-hint">Voir le plan de découpe</div>
+                            </div>
+                            <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div id="result-offcuts-section" class="result-section hidden">
+                        <div class="result-section-title">Chutes à récupérer</div>
+                        <div id="result-offcuts-list"></div>
+                    </div>
+
+                    <div class="result-actions">
+                        <button id="btn-consume" class="btn btn-primary btn-large hidden">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="6" cy="6" r="3"></circle>
+                                <circle cx="6" cy="18" r="3"></circle>
+                                <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+                                <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+                                <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+                            </svg>
+                            Découper & Stocker Chutes
+                        </button>
+                        <button id="btn-mark-used" class="btn btn-primary btn-large">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Marquer utilisée
+                        </button>
+                        <button id="btn-cancel-scan" class="btn btn-secondary">Annuler</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Simulation Modal -->
+        <div id="simulation-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <button id="sim-modal-close" class="modal-close" aria-label="Fermer">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+
+                <header class="page-header mb-lg">
+                    <h2 class="page-title text-lg">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        Simulation Achat
+                    </h2>
+                    <p class="text-muted" id="sim-material-name">Matériau</p>
+                </header>
+
+                <div class="input-group mb-lg">
+                    <label class="input-label" for="sim-quantity">Quantité à acheter (panneaux)</label>
+                    <input type="number" id="sim-quantity" class="search-input" value="1" min="1">
+                </div>
+
+                <div id="sim-results" class="card results-card hidden">
+                    <div class="flex-between mb-md">
+                        <span class="text-muted">Fournisseur le moins cher</span>
+                        <div class="status-badge active" id="sim-supplier-name">-</div>
+                    </div>
+                    <div class="flex-between mb-md">
+                        <span class="text-muted">Prix Unitaire</span>
+                        <span id="sim-unit-price" class="font-bold">- €</span>
+                    </div>
+                    <div class="flex-between total-cost">
+                        <span>Coût Total</span>
+                        <span id="sim-total-cost" class="text-primary">- €</span>
+                    </div>
+                </div>
+
+                <div class="result-actions">
+                    <button id="btn-run-simulation" class="btn btn-secondary">
+                        Calculer Simulation
+                    </button>
+                    <button id="btn-validate-purchase" class="btn btn-primary hidden">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <path d="M16 10a4 4 0 0 1-8 0"></path>
+                        </svg>
+                        Valider l'Achat (Ajouter au Stock)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        </div>
+
+        <!-- Supplier Prices Modal -->
+        <div id="supplier-prices-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <button id="supp-price-modal-close" class="modal-close" aria-label="Fermer">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+                <header class="page-header">
+                    <h2 class="page-title">Tarifs : <span id="supp-price-name"></span></h2>
+                </header>
+
+                <div class="card card-tertiary">
+                    <h3 class="section-title-md">Ajouter un prix</h3>
+                    <div class="input-group">
+                        <label class="input-label" for="supp-new-material">Matériau</label>
+                        <select id="supp-new-material" class="search-input mb-sm"></select>
+                    </div>
+                    <div class="grid-2-col">
+                        <div class="input-group">
+                            <label class="input-label" for="supp-new-price">Prix (€)</label>
+                            <input type="number" id="supp-new-price" class="search-input" step="0.01">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label" for="supp-new-type">Unité</label>
+                            <select id="supp-new-type" class="search-input">
+                                <option value="m2">/ m²</option>
+                                <option value="unit" selected>/ Panneau</option>
+                                <option value="m3">/ m³</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button id="btn-add-price" class="btn btn-primary small mt-md w-full">Ajouter Tarif</button>
+                </div>
+
+                <div id="supp-prices-list" class="card-list"></div>
+            </div>
+        </div>
+
+        <!-- Supplier Modal -->
+        <div id="supplier-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <button id="supplier-modal-close" class="modal-close" aria-label="Fermer">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+                <header class="page-header mb-lg">
+                    <h2 class="page-title text-lg" id="supplier-modal-title">Nouveau Fournisseur</h2>
+                </header>
+
+                <input type="hidden" id="supp-id">
+
+                <div class="input-group">
+                    <label class="input-label" for="supp-name">Nom</label>
+                    <input type="text" id="supp-name" class="search-input mb-sm" required>
+                </div>
+
+                <div class="grid-2-col">
+                    <div class="input-group">
+                        <label class="input-label" for="supp-contact">Contact (Nom)</label>
+                        <input type="text" id="supp-contact" class="search-input">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="supp-phone">Téléphone</label>
+                        <input type="tel" id="supp-phone" class="search-input">
+                    </div>
+                </div>
+
+                <div class="input-group mb-sm">
+                    <label class="input-label" for="supp-email">Email</label>
+                    <input type="email" id="supp-email" class="search-input">
+                </div>
+
+                <div class="grid-2-col">
+                    <div class="input-group">
+                        <label class="input-label" for="supp-delay">Délai (jours)</label>
+                        <input type="number" id="supp-delay" class="search-input" value="7">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="supp-website">Site Web</label>
+                        <input type="url" id="supp-website" class="search-input">
+                    </div>
+                </div>
+
+                <div class="input-group mb-lg">
+                    <label class="input-label" for="supp-notes">Notes</label>
+                    <textarea id="supp-notes" class="search-input" rows="2"></textarea>
+                </div>
+
+                <button id="btn-save-supplier" class="btn btn-primary w-full">Enregistrer</button>
+            </div>
+        </div>
+
+        <!-- Scraping Modal -->
+        <div id="scraping-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <button id="scraping-modal-close" class="modal-close" aria-label="Fermer">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+                <header class="page-header mb-lg">
+                    <h2 class="page-title text-lg">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path
+                                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
+                            </path>
+                        </svg>
+                        IA Locale - Analyse
+                    </h2>
+                    <p class="text-muted">Récupération automatique des prix</p>
+                </header>
+
+                <div class="input-group mb-lg">
+                    <label class="input-label" for="scraping-url">URL du produit (Fournisseur)</label>
+                    <input type="url" id="scraping-url" class="search-input mb-sm"
+                        placeholder="https://www.leroymerlin.fr/...">
+                    <button id="btn-run-scraping" class="btn btn-primary w-full">Lancer l'Analyse IA</button>
+                </div>
+
+                <div id="scraping-progress" class="hidden mb-lg">
+                    <div class="flex-between mb-sm">
+                        <span class="text-muted">Analyse en cours...</span>
+                        <span class="text-primary font-bold">100% (Simulation)</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill"></div>
+                    </div>
+                </div>
+
+                <div id="scraping-results" class="card hidden">
+                    <h3 class="section-title-md">Résultat de l'analyse</h3>
+
+                    <div class="input-group">
+                        <label class="input-label" for="scraping-res-name">Nom détecté</label>
+                        <input type="text" id="scraping-res-name" class="search-input mb-sm">
+                    </div>
+
+                    <div class="grid-2-col">
+                        <div class="input-group">
+                            <label class="input-label" for="scraping-res-price">Prix (€)</label>
+                            <input type="number" id="scraping-res-price" class="search-input" step="0.01">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label" for="scraping-res-dims">Dim. (texte)</label>
+                            <input type="text" id="scraping-res-dims" class="search-input">
+                        </div>
+                    </div>
+
+                    <div class="input-group mt-md">
+                        <label class="input-label" for="scraping-target-supplier">Fournisseur :</label>
+                        <select id="scraping-target-supplier" class="search-input mb-sm"></select>
+                    </div>
+
+                    <button id="btn-save-scraping" class="btn btn-success w-full mt-md">
+                        Ajouter au Catalogue
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock View -->
+        <section id="view-stock" class="view">
+            <header class="page-header">
+                <h1 class="page-title">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line>
+                        <path
+                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                        </path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                    Stock
+                </h1>
+
+                <div class="tabs-container">
+                    <button class="tab-btn active" data-tab="stock-internal">Mon Stock</button>
+                    <button class="tab-btn" data-tab="stock-suppliers">Fournisseurs</button>
+                </div>
+            </header>
+
+            <!-- Tab: Mon Stock -->
+            <div id="tab-stock-internal" class="tab-content active">
+                <div class="stock-controls">
+                    <div class="search-bar">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="stock-search" class="search-input" placeholder="Rechercher...">
+                    </div>
+                    <div class="filter-pills">
+                        <button class="pill-btn active" data-filter="all">Tout</button>
+                        <button class="pill-btn" data-filter="low">Faible</button>
+                        <button class="pill-btn" data-filter="offcuts">Chutes</button>
+                    </div>
+                </div>
+
+                <div id="stock-list" class="card-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Suppliers -->
+            <div id="tab-stock-suppliers" class="tab-content hidden">
+                <div class="stock-controls">
+                    <button id="btn-add-supplier" class="btn btn-primary small btn-full-width-mb">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Nouveau Fournisseur
+                    </button>
+                    <button id="btn-open-scraping" class="btn btn-secondary small btn-full-width-mb">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                            <path
+                                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
+                            </path>
+                        </svg>
+                        IA Locale (Scraping)
+                    </button>
+                    <button id="btn-export-suppliers" class="btn btn-secondary small btn-full-width-mb">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Export
+                    </button>
+                </div>
+                <div id="suppliers-list" class="card-list">
+                    <div class="empty-state">
+                        <p>Aucun fournisseur. Ajoutez-en un !</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Optimizations View -->
+        <section id="view-optimizations" class="view">
+            <header class="page-header">
+                <h1 class="page-title">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="6" cy="6" r="3"></circle>
+                        <circle cx="6" cy="18" r="3"></circle>
+                        <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+                        <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+                        <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+                    </svg>
+                    Découpes
+                </h1>
+            </header>
+            <div id="optimizations-list" class="card-list">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Clients View -->
+        <section id="view-clients" class="view">
+            <header class="page-header">
+                <h1 class="page-title">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    Clients
+                </h1>
+            </header>
+            <div id="clients-list" class="card-list">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Commandes View -->
+        <section id="view-orders" class="view">
+            <header class="page-header">
+                <h1 class="page-title">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <path d="M16 10a4 4 0 0 1-8 0"></path>
+                    </svg>
+                    Commandes
+                </h1>
+            </header>
+
+            <div class="stock-controls">
+                <div class="filter-pills">
+                    <button class="pill-btn active" data-order-status="all">Tout</button>
+                    <button class="pill-btn" data-order-status="draft">Brouillons</button>
+                    <button class="pill-btn" data-order-status="ordered">En cours</button>
+                    <button class="pill-btn" data-order-status="received">Reçues</button>
+                </div>
+            </div>
+
+            <div id="orders-list" class="card-list">
+                <div class="empty-state">
+                    <p>Aucune commande.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" data-view="projects">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="nav-label">Projets</span>
+        </button>
+        <button class="nav-item" data-view="stock">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line>
+                <path
+                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                </path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+            <span class="nav-label">Stock</span>
+        </button>
+        <button class="nav-item" data-view="orders">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <path d="M16 10a4 4 0 0 1-8 0"></path>
+            </svg>
+            <span class="nav-label">Commandes</span>
+        </button>
+        <button class="nav-item" data-view="optimizations">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="6" cy="6" r="3"></circle>
+                <circle cx="6" cy="18" r="3"></circle>
+                <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+                <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+                <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+            </svg>
+            <span class="nav-label">Découpes</span>
+        </button>
+        <button class="nav-item" data-view="clients">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span class="nav-label">Clients</span>
+        </button>
+    </nav>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/syncQueue.js"></script>
+    <script src="js/qrScanner.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>

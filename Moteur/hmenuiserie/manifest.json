@@ -1,0 +1,54 @@
+{
+    "name": "H Menuiserie - Atelier",
+    "short_name": "H Menuiserie",
+    "description": "Application atelier pour gestion stock et découpes - Mode hors-ligne",
+    "start_url": "/",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "theme_color": "#1e40af",
+    "background_color": "#0f172a",
+    "lang": "fr-FR",
+    "categories": [
+        "productivity",
+        "utilities"
+    ],
+    "icons": [
+        {
+            "src": "icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Scanner QR",
+            "short_name": "Scanner",
+            "url": "/?view=scanner",
+            "icons": [
+                {
+                    "src": "icons/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "Stock",
+            "short_name": "Stock",
+            "url": "/?view=stock",
+            "icons": [
+                {
+                    "src": "icons/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ]
+}

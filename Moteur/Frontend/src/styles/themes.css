@@ -1,0 +1,248 @@
+/* Couleurs personnalisées - Variables CSS */
+:root {
+    /* Palette par défaut (clair) */
+    --color-primary: #3b82f6;
+    --color-secondary: #8b5cf6;
+    --color-accent: #ec4899;
+    --color-background: #f8fafc;
+    --color-surface: #ffffff;
+    --color-text: #1e293b;
+    --color-border: #e2e8f0;
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-error: #ef4444;
+
+    /* Durée des animations */
+    --transition-duration: 0.3s;
+    --transition-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.dark {
+    /* Palette par défaut (sombre) */
+    --color-primary: #60a5fa;
+    --color-secondary: #a78bfa;
+    --color-accent: #f472b6;
+    --color-background: #0f172a;
+    --color-surface: #1e293b;
+    --color-text: #f1f5f9;
+    --color-border: #334155;
+    --color-success: #34d399;
+    --color-warning: #fbbf24;
+    --color-error: #f87171;
+}
+
+/* ============================================
+   ANIMATIONS DE CHANGEMENT DE THÈME
+   ============================================ */
+
+/* Animation de transition de couleur fluide */
+html {
+    transition: background-color var(--transition-duration) var(--transition-ease),
+                color var(--transition-duration) var(--transition-ease);
+}
+
+body {
+    transition: background-color var(--transition-duration) var(--transition-ease),
+                color var(--transition-duration) var(--transition-ease);
+}
+
+/* Transition pour les variables CSS */
+.transition-theme {
+    transition: background-color var(--transition-duration) var(--transition-ease),
+                color var(--transition-duration) var(--transition-ease),
+                border-color var(--transition-duration) var(--transition-ease);
+}
+
+/* Animation de fade-in pour les changements de thème */
+@keyframes theme-fade-in {
+    from {
+        opacity: 0.95;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+html.theme-transitioning {
+    animation: theme-fade-in var(--transition-duration) var(--transition-ease);
+}
+
+/* Animation de couleur progressive */
+@keyframes color-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.animate-color-pulse {
+    animation: color-pulse 2s var(--transition-ease) infinite;
+}
+
+/* Animation de changement de couleur pour les boutons */
+@keyframes button-color-change {
+    0% {
+        background-color: var(--color-primary);
+    }
+    100% {
+        background-color: var(--color-primary);
+    }
+}
+
+/* ============================================
+   CLASSES UTILITAIRES
+   ============================================ */
+
+/* Classes utilitaires pour utiliser les couleurs personnalisées */
+.bg-primary {
+    background-color: var(--color-primary);
+    transition: background-color var(--transition-duration) var(--transition-ease);
+}
+
+.bg-secondary {
+    background-color: var(--color-secondary);
+    transition: background-color var(--transition-duration) var(--transition-ease);
+}
+
+.bg-accent {
+    background-color: var(--color-accent);
+    transition: background-color var(--transition-duration) var(--transition-ease);
+}
+
+.text-primary {
+    color: var(--color-primary);
+    transition: color var(--transition-duration) var(--transition-ease);
+}
+
+.text-secondary {
+    color: var(--color-secondary);
+    transition: color var(--transition-duration) var(--transition-ease);
+}
+
+.text-accent {
+    color: var(--color-accent);
+    transition: color var(--transition-duration) var(--transition-ease);
+}
+
+.border-primary {
+    border-color: var(--color-primary);
+    transition: border-color var(--transition-duration) var(--transition-ease);
+}
+
+.border-secondary {
+    border-color: var(--color-secondary);
+    transition: border-color var(--transition-duration) var(--transition-ease);
+}
+
+.border-accent {
+    border-color: var(--color-accent);
+    transition: border-color var(--transition-duration) var(--transition-ease);
+}
+
+.btn-primary-custom {
+    background-color: var(--color-primary);
+    color: white;
+    transition: all var(--transition-duration) var(--transition-ease);
+}
+
+.btn-primary-custom:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary-custom:active {
+    opacity: 0.8;
+    transform: translateY(0);
+}
+
+.btn-secondary-custom {
+    background-color: var(--color-secondary);
+    color: white;
+    transition: all var(--transition-duration) var(--transition-ease);
+}
+
+.btn-secondary-custom:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-secondary-custom:active {
+    opacity: 0.8;
+    transform: translateY(0);
+}
+
+/* Styles pour les composants utilisant les couleurs */
+.accent-border {
+    border-left: 4px solid var(--color-primary);
+    transition: border-color var(--transition-duration) var(--transition-ease);
+}
+
+.accent-bg {
+    background-color: var(--color-primary);
+    opacity: 0.1;
+    transition: background-color var(--transition-duration) var(--transition-ease);
+}
+
+/* ============================================
+   ANIMATIONS ADDITIONNELLES
+   ============================================ */
+
+/* Animation de scintillement pour les éléments actifs */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+.animate-shimmer {
+    background: linear-gradient(
+        90deg,
+        var(--color-background) 0%,
+        var(--color-surface) 50%,
+        var(--color-background) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+}
+
+/* Animation de "bounce" pour les notifications */
+@keyframes bounce-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.3) translateY(-20px);
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.animate-bounce-in {
+    animation: bounce-in 0.5s var(--transition-ease);
+}
+
+/* Animation de glissement pour les menus */
+@keyframes slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-down {
+    animation: slide-down var(--transition-duration) var(--transition-ease);
+}
