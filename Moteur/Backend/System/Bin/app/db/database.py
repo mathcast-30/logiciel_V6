@@ -2,6 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from pathlib import Path
 
+from dotenv import load_dotenv
+import os
+
 # Professional Data Pathing - ENGINE 
 current_path = Path(__file__).resolve()
 # Robustly find 'Moteur' anchor
@@ -12,12 +15,24 @@ except ValueError:
     # Fallback if folder structure is weird
     base_engine_dir = current_path.parent.parent.parent.parent.parent.parent 
 
+# Load .env at the project root (parent of Moteur)
+project_root = base_engine_dir.parent
+env_path = project_root / ".env"
+load_dotenv(dotenv_path=env_path)
+
 db_dir = base_engine_dir / "UserData" / "BaseDeDonnees"
 optim_dir = base_engine_dir / "UserData" / "Optimisations"
 db_dir.mkdir(parents=True, exist_ok=True)
 optim_dir.mkdir(parents=True, exist_ok=True)
 
-db_path = db_dir / "opticut.db"
+# Determine DB path: env variable DB_PATH takes precedence
+db_path_env = os.getenv("DB_PATH")
+if db_path_env:
+    db_path = Path(db_path_env).resolve()
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+else:
+    db_path = db_dir / "opticut.db"
+
 OPTIMIZATIONS_DIR = optim_dir
 
 # SQLite database file

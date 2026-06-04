@@ -25,12 +25,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("OptiCutCPSAT")
 
-# Try to import OR-Tools, gracefully degrade if not available
-try:
-    from ortools.sat.python import cp_model
-    ORTOOLS_AVAILABLE = True
-except ImportError:
-    ORTOOLS_AVAILABLE = False
+# Check if OR-Tools is available without loading it to save startup time
+import importlib.util
+ORTOOLS_AVAILABLE = importlib.util.find_spec("ortools") is not None
+if not ORTOOLS_AVAILABLE:
     logger.warning("OR-Tools not installed. CP-SAT solver unavailable. Install with: pip install ortools")
 
 
@@ -119,6 +117,12 @@ class CPSATOptimizer:
             Dict with placements and metrics
         """
         start_time = time.perf_counter()
+        
+        if not ORTOOLS_AVAILABLE:
+            raise RuntimeError("OR-Tools not installed.")
+            
+        # Lazy import to speed up backend startup
+        from ortools.sat.python import cp_model
         
         if not pieces:
             return {"success": True, "placements": [], "panels_used": 0}

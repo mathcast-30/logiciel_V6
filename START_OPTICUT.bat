@@ -1,44 +1,26 @@
 @echo off
-title Lancement OptiCut Pro V4
+title Lancement OptiCut Pro V6
 
-echo === Lancement OptiCut Pro V4 ===
-echo.
-
+echo ETAPE 1 - Definition des dossiers
 SET "BACKEND_DIR=%~dp0Moteur\Backend\System\Bin"
-IF EXIST "%~dp0Moteur\Backend\app\main.py" SET "BACKEND_DIR=%~dp0Moteur\Backend"
-
 SET "FRONTEND_DIR=%~dp0Moteur\Frontend"
 
-IF NOT EXIST "%BACKEND_DIR%\app\main.py" (
-    echo ERREUR : Le dossier Backend ou app\main.py est introuvable.
-    pause
-    exit /b 1
-)
+echo ETAPE 2 - Configuration de Conda
+SET "CONDA_BAT=C:\Users\Mathe\anaconda3\Scripts\activate.bat"
+IF NOT EXIST "%CONDA_BAT%" SET "CONDA_BAT=C:\ProgramData\anaconda3\Scripts\activate.bat"
+CALL "%CONDA_BAT%" base
 
-IF NOT EXIST "%FRONTEND_DIR%\package.json" (
-    echo ERREUR : Le dossier Frontend ou package.json est introuvable.
-    pause
-    exit /b 1
-)
+echo ETAPE 3 - Lancement du Backend
+SET "UVICORN=C:\Users\Mathe\anaconda3\Scripts\uvicorn.exe"
+start "OptiCut - Backend" /D "%BACKEND_DIR%" cmd /k "%UVICORN% app.main:app --host 127.0.0.1 --port 8000"
 
-IF NOT EXIST "%FRONTEND_DIR%\node_modules" (
-    echo INFO : node_modules introuvable. Installation de npm en cours...
-    cd /d "%FRONTEND_DIR%"
-    call npm install
-)
+echo ETAPE 4 - Lancement du Frontend
+start "OptiCut - Frontend" /D "%FRONTEND_DIR%" cmd /k "npm run dev -- --host 127.0.0.1"
 
-IF NOT EXIST "%BACKEND_DIR%\requirements.txt" (
-    echo AVERTISSEMENT : requirements.txt est introuvable dans le Backend.
-)
+echo ETAPE 5 - Attente de 8 secondes
+timeout /t 8 /nobreak
 
-start "OptiCut - Backend" /D "%BACKEND_DIR%" cmd /k "call conda activate base && uvicorn app.main:app --reload --port 8000"
+echo ETAPE 6 - Ouverture du navigateur
+start http://127.0.0.1:5173
 
-start "OptiCut - Frontend" /D "%FRONTEND_DIR%" cmd /k "npm run dev"
-
-timeout /t 5 /nobreak >nul
-
-start http://localhost:5173
-
-echo.
-echo OptiCut Pro V4 est lance. Fermez les terminaux pour arreter.
 pause
