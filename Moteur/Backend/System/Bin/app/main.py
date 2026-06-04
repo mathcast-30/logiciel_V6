@@ -133,9 +133,10 @@ app.include_router(exports.router, prefix="/api/exports", tags=["Exports"])
 async def startup_event():
     """Triggered when the backend starts."""
     import sys
+    from .db.database import db_path
     
     log_info("System", "Main", "🚀 OptiCut Pro Backend (V4.1) est opérationnel.")
-    log_info("System", "Database", f"SQLite Engine initialisé.")
+    log_info("System", "Database", f"SQLite Engine initialisé. Fichier utilisé : {db_path}")
     
     # --- DIAGNOSTIC ENVIRONNEMENT ---
     log_info("Diagnostic", "Python", f"Executable: {sys.executable}")
@@ -148,7 +149,7 @@ async def startup_event():
         log_error("Diagnostic", "Dependencies", f"ERREUR CRITIQUE: Shapely introuvable. Moteur 'Massif' indisponible. ({e})")
     # --------------------------------
 
-@app.get("/")
+@app.get("/api/health")
 def health_check():
     """Simple health check endpoint."""
     return {
@@ -156,6 +157,15 @@ def health_check():
         "engine": "OptiCut Pro V4",
         "monitoring": "active (port 9999)"
     }
+
+# Serve React Frontend
+frontend_dist = backend_dir.parent / "Frontend" / "dist"
+if frontend_dist.exists() and frontend_dist.is_dir():
+    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
+else:
+    @app.get("/")
+    def frontend_not_found():
+        return {"error": "Frontend build not found. Please run 'npm run build' in the Frontend directory."}
 
 if __name__ == "__main__":
     # Local execution support
