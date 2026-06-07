@@ -14,7 +14,8 @@ import {
     BarChart3,
     Library,
     Wrench,
-    FileUp
+    FileUp,
+    TrendingUp
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -29,6 +30,7 @@ const navItems = [
     { path: '/hardware', icon: Wrench, label: 'Quincaillerie' },
     { path: '/optimize', icon: Scissors, label: 'Optimisation' },
     { path: '/library', icon: Library, label: 'Bibliothèque' },
+    { path: '/management', icon: TrendingUp, label: 'Gestion' },
     { path: '/settings', icon: Settings, label: 'Paramètres' },
 ];
 

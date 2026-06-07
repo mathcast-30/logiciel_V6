@@ -40,7 +40,7 @@ def read_assemblies(db: Session = Depends(get_db)):
 
 # --- Hardware Items ---
 
-@router.post("/", response_model=HardwareSchema)
+@router.post("", response_model=HardwareSchema)
 def create_hardware(item: HardwareCreate, db: Session = Depends(get_db)):
     # Check reference uniqueness
     if db.query(Hardware).filter(Hardware.reference == item.reference).first():
@@ -52,7 +52,7 @@ def create_hardware(item: HardwareCreate, db: Session = Depends(get_db)):
     db.refresh(db_item)
     return db_item
 
-@router.get("/", response_model=List[HardwareSchema])
+@router.get("", response_model=List[HardwareSchema])
 def read_hardware(skip: int = 0, limit: int = 100, category: str = None, db: Session = Depends(get_db)):
     query = db.query(Hardware)
     if category:

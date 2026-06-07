@@ -27,7 +27,7 @@ from .db.database import engine, Base
 from .routers import (
     projects, materials, optimize, stock, clients, 
     suppliers, hardware, ai, step_import, stats,
-    exports, backups, qr, quotes, scraping, orders, templates
+    exports, backups, qr, quotes, scraping, orders, templates, files
 )
 
 # Import professional monitoring system
@@ -128,6 +128,7 @@ app.include_router(scraping.router, prefix="/api/scraping", tags=["Web Scraping"
 app.include_router(orders.router, prefix="/api/orders", tags=["Commandes"])
 app.include_router(templates.router, prefix="/api/templates", tags=["Modèles"])
 app.include_router(exports.router, prefix="/api/exports", tags=["Exports"])
+app.include_router(files.router, prefix="/api/file-explorer", tags=["Explorateur Fichiers"])
 
 @app.on_event("startup")
 async def startup_event():
