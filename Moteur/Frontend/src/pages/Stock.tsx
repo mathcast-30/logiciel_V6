@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../components/UI/ConfirmDialog';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { type MaterialWithStock, type Stock, type EdgeBand, MaterialService } from '../services/materialService';
 import { type Supplier, SupplierService, type ScrapedProduct, type ScrapeStats, type SupplierMaterial } from '../services/supplierService';
 
@@ -96,10 +97,20 @@ export function StockPage() {
     }, []);
 
     const progressBarRef = useRef<HTMLDivElement>(null);
+    const isMountedRef = useRef(true);
     useEffect(() => {
-        if (progressBarRef.current) {
-            const pct = scrapingResult ? Math.min(100, ((scrapingResult.scanned_pages || 0) / maxPages) * 100) : 0;
-            progressBarRef.current.style.setProperty('--progress-width', `${pct}%`);
+        isMountedRef.current = true;
+        return () => { isMountedRef.current = false; };
+    }, []);
+    useEffect(() => {
+        if (!isMountedRef.current) return;
+        try {
+            if (progressBarRef.current) {
+                const pct = scrapingResult ? Math.min(100, ((scrapingResult.scanned_pages || 0) / maxPages) * 100) : 0;
+                progressBarRef.current.style.setProperty('--progress-width', `${pct}%`);
+            }
+        } catch (e) {
+            console.warn('Progress bar DOM update skipped:', e);
         }
     }, [scrapingResult, maxPages]);
 
@@ -1423,6 +1434,7 @@ export function StockPage() {
 
             {/* Scraping Modal */}
             {isScrapingModalOpen && (
+                <ErrorBoundary>
                 <div className="modal-overlay" onClick={() => setIsScrapingModalOpen(false)}>
                     <div className="modal-content max-w-4xl h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
                         <div className="modal-header border-b border-slate-100 pb-4">
@@ -1523,7 +1535,7 @@ export function StockPage() {
 
                                     <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {scrapingResult.products.map((prod, idx) => (
-                                            <div key={idx} className="border border-slate-200 rounded-lg p-3 hover:border-blue-300 hover:shadow-md transition bg-white flex flex-col gap-2 group relative">
+                                            <div key={prod.url || `scraped-${idx}`} className="border border-slate-200 rounded-lg p-3 hover:border-blue-300 hover:shadow-md transition bg-white flex flex-col gap-2 group relative">
                                                 {/* Prominent Removal Button (Grosse croix rouge) */}
                                                 <button
                                                     onClick={() => handleRemoveScrapedProduct(prod.url)}
@@ -1661,6 +1673,7 @@ export function StockPage() {
                         </div>
                     </div>
                 </div>
+                </ErrorBoundary>
             )}
 
             {/* Catalog Modal */}

@@ -2,6 +2,7 @@ from . import ai
 from . import backups
 from . import clients
 from . import exports
+from . import files
 from . import hardware
 from . import materials
 from . import optimize

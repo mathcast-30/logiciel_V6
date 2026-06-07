@@ -18,12 +18,12 @@ def seed_templates():
             db.add(db_t)
         db.commit()
 
-@router.get("/", response_model=List[TemplateSchema])
+@router.get("", response_model=List[TemplateSchema])
 def list_templates(db: Session = Depends(get_db)):
     """List all available templates."""
     return db.query(Template).all()
 
-@router.post("/", response_model=TemplateSchema)
+@router.post("", response_model=TemplateSchema)
 def create_template(template: TemplateCreate, db: Session = Depends(get_db)):
     """Create a new parametric template."""
     db_template = Template(**template.model_dump())
