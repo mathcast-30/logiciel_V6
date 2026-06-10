@@ -81,7 +81,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ analytics }) => {
 
         {/* Graphique 2 — Courbe K-Metric par semaine */}
         <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-theme-text-main mb-6">Évolution K-Metric (Cible > 85%)</h3>
+          <h3 className="text-lg font-semibold text-theme-text-main mb-6">Évolution K-Metric (Cible &gt; 85%)</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={analytics.k_metric_weekly} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
