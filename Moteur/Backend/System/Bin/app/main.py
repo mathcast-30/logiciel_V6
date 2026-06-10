@@ -41,6 +41,30 @@ except Exception as e:
     # but monitoring_client is designed to be safe.
     print(f"[DB ERROR] Table creation failed: {e}")
 
+# Migrations for Management Hub
+try:
+    from sqlalchemy import text
+    with engine.begin() as conn:
+        migrations = [
+            "ALTER TABLE projects ADD COLUMN status TEXT DEFAULT 'reflexion'",
+            "ALTER TABLE projects ADD COLUMN delivery_date DATE",
+            "ALTER TABLE projects ADD COLUMN start_date DATE",
+            "ALTER TABLE projects ADD COLUMN steps_json TEXT DEFAULT '[]'",
+            "ALTER TABLE projects ADD COLUMN estimated_cost REAL DEFAULT 0.0",
+            "ALTER TABLE projects ADD COLUMN actual_cost REAL DEFAULT 0.0",
+            "ALTER TABLE projects ADD COLUMN estimated_hours REAL DEFAULT 0.0",
+            "ALTER TABLE projects ADD COLUMN actual_hours REAL DEFAULT 0.0"
+        ]
+        for query in migrations:
+            try:
+                conn.execute(text(query))
+            except Exception as e:
+                # Column likely exists
+                pass
+except Exception as e:
+    print(f"[MIGRATION ERROR] Management Hub migration failed: {e}")
+
+
 # Initialize FastAPI Application
 app = FastAPI(
     title="OptiCut Pro API",

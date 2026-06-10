@@ -1112,8 +1112,7 @@ export function StockPage() {
             )}
 
             {/* Material Modal */}
-            {isMaterialModalOpen && (
-                <div className="modal-overlay" onClick={() => setIsMaterialModalOpen(false)}>
+            <div className="modal-overlay" style={{ display: isMaterialModalOpen ? undefined : 'none' }} onClick={() => setIsMaterialModalOpen(false)}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2 className="text-xl font-bold text-slate-800">Nouveau Matériau</h2>
@@ -1234,11 +1233,9 @@ export function StockPage() {
                         </form>
                     </div>
                 </div>
-            )}
 
             {/* Stock Modal */}
-            {isStockModalOpen && (
-                <div className="modal-overlay" onClick={() => setIsStockModalOpen(false)}>
+            <div className="modal-overlay" style={{ display: isStockModalOpen ? undefined : 'none' }} onClick={() => setIsStockModalOpen(false)}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2 className="text-xl font-bold text-slate-800">
@@ -1292,11 +1289,9 @@ export function StockPage() {
                         </form>
                     </div>
                 </div>
-            )}
 
             {/* Edge Band Modal */}
-            {isEdgeBandModalOpen && (
-                <div className="modal-overlay" onClick={() => setIsEdgeBandModalOpen(false)}>
+            <div className="modal-overlay" style={{ display: isEdgeBandModalOpen ? undefined : 'none' }} onClick={() => setIsEdgeBandModalOpen(false)}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2 className="text-xl font-bold text-slate-800">Nouveau Chant</h2>
@@ -1325,11 +1320,9 @@ export function StockPage() {
                         </form>
                     </div>
                 </div>
-            )}
 
             {/* Supplier Modal */}
-            {isSupplierModalOpen && (
-                <div className="modal-overlay" onClick={() => { setIsSupplierModalOpen(false); setEditingSupplierId(null); }}>
+            <div className="modal-overlay" style={{ display: isSupplierModalOpen ? undefined : 'none' }} onClick={() => { setIsSupplierModalOpen(false); setEditingSupplierId(null); }}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2 className="text-xl font-bold text-slate-800">
@@ -1430,12 +1423,10 @@ export function StockPage() {
                         </form>
                     </div>
                 </div>
-            )}
 
             {/* Scraping Modal */}
-            {isScrapingModalOpen && (
-                <ErrorBoundary>
-                <div className="modal-overlay" onClick={() => setIsScrapingModalOpen(false)}>
+            <ErrorBoundary>
+                <div className="modal-overlay" style={{ display: isScrapingModalOpen ? undefined : 'none' }} onClick={() => setIsScrapingModalOpen(false)}>
                     <div className="modal-content max-w-4xl h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
                         <div className="modal-header border-b border-slate-100 pb-4">
                             <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -1674,11 +1665,10 @@ export function StockPage() {
                     </div>
                 </div>
                 </ErrorBoundary>
-            )}
 
             {/* Catalog Modal */}
-            {isCatalogModalOpen && selectedSupplier && (
-                <div className="modal-overlay" onClick={() => setIsCatalogModalOpen(false)}>
+            <div className="modal-overlay" style={{ display: (isCatalogModalOpen && selectedSupplier) ? undefined : 'none' }} onClick={() => setIsCatalogModalOpen(false)}>
+                {selectedSupplier ? (
                     <div className="modal-content !max-w-5xl h-[90vh]" onClick={e => e.stopPropagation()}>
                         <div className="modal-header flex justify-between items-center">
                             <div>
@@ -1922,12 +1912,12 @@ export function StockPage() {
                             <button onClick={() => setIsCatalogModalOpen(false)} className="btn-secondary">Fermer</button>
                         </div>
                     </div>
-                </div>
-            )}
+                ) : null}
+            </div>
 
             {/* Association Modal */}
-            {isAssociationModalOpen && editingProduct && (
-                <div className="modal-overlay" onClick={() => setIsAssociationModalOpen(false)}>
+            <div className="modal-overlay" style={{ display: (isAssociationModalOpen && editingProduct) ? undefined : 'none' }} onClick={() => setIsAssociationModalOpen(false)}>
+                {editingProduct ? (
                     <div className="modal-content !max-w-2xl" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2 className="text-xl font-bold">Associer au stock interne</h2>
@@ -2034,12 +2024,12 @@ export function StockPage() {
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                ) : null}
+            </div>
 
             {/* Product Edit Modal */}
-            {isProductEditModalOpen && editingProduct && (
-                <div className="modal-overlay" onClick={() => setIsProductEditModalOpen(false)}>
+            <div className="modal-overlay" style={{ display: (isProductEditModalOpen && editingProduct) ? undefined : 'none' }} onClick={() => setIsProductEditModalOpen(false)}>
+                {editingProduct ? (
                     <div className="modal-content !max-w-xl" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2 className="text-xl font-bold">Modifier le produit</h2>
@@ -2051,8 +2041,8 @@ export function StockPage() {
                             <button onClick={() => setIsProductEditModalOpen(false)} className="btn-secondary">Fermer</button>
                         </div>
                     </div>
-                </div>
-            )}
+                ) : null}
+            </div>
 
             <ConfirmDialog
                 isOpen={confirmDialog.isOpen}

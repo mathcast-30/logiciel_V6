@@ -184,7 +184,7 @@ export const SupplierService = {
         onError: (err: string) => void
     ): Promise<void> => {
         try {
-            const response = await fetch(`${api.defaults.baseURL}/scraping/analyze`, {
+            const response = await fetch(`${api.defaults.baseURL}scraping/analyze`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
