@@ -134,6 +134,60 @@ def update_project_status(
     db.refresh(project)
     return project
 
+@router.patch("/{project_id}/status")
+def patch_project_status(
+    project_id: int,
+    status: str = Body(..., embed=True),
+    db: Session = Depends(get_db)
+):
+    """Update project status (PATCH equivalent)."""
+    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    valid_statuses = ["reflexion", "en_cours", "fini", "valide"]
+    if status not in valid_statuses:
+        # We also accept existing statuses like 'draft' just to be safe
+        project.status = status
+    else:
+        project.status = status
+        
+    db.commit()
+    db.refresh(project)
+    return project
+
+@router.patch("/{project_id}/planning")
+def patch_project_planning(
+    project_id: int,
+    start_date: Optional[str] = Body(None),
+    delivery_date: Optional[str] = Body(None),
+    steps: Optional[list] = Body(None),
+    db: Session = Depends(get_db)
+):
+    """Update project dates and steps."""
+    from datetime import datetime
+    import json
+    
+    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    try:
+        if start_date is not None:
+            project.start_date = datetime.fromisoformat(start_date.replace("Z", "+00:00")) if start_date else None
+        if delivery_date is not None:
+            project.delivery_date = datetime.fromisoformat(delivery_date.replace("Z", "+00:00")) if delivery_date else None
+        if steps is not None:
+            project.steps_json = json.dumps(steps)
+            
+        db.commit()
+        db.refresh(project)
+        return project
+    except Exception as e:
+        logger.error(f"Error updating planning: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 
 @router.patch("/{project_id}/assign-client")
 async def assign_client(

@@ -76,8 +76,8 @@ export interface SupplierWithProducts extends Supplier {
 
 export const SupplierService = {
     // Get all suppliers
-    getAll: async (): Promise<Supplier[]> => {
-        const response = await api.get<Supplier[]>('/suppliers/');
+    getAll: async (signal?: AbortSignal): Promise<Supplier[]> => {
+        const response = await api.get<Supplier[]>('/suppliers/', { signal });
         return response.data;
     },
 
@@ -157,9 +157,9 @@ export const SupplierService = {
     },
 
     // Get stats
-    getStats: async (): Promise<{ suppliers: number; products: number; orders: number }> => {
+    getStats: async (signal?: AbortSignal): Promise<{ suppliers: number; products: number; orders: number }> => {
         try {
-            const suppliers = await api.get<Supplier[]>('/suppliers/');
+            const suppliers = await api.get<Supplier[]>('/suppliers/', { signal });
             let totalProducts = 0;
             for (const s of suppliers.data) {
                 if (s.materials) totalProducts += s.materials.length;

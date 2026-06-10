@@ -8,11 +8,9 @@ import { Optimize } from './pages/Optimize';
 import { StockPage as Stock } from './pages/Stock';
 import { Clients } from './pages/Clients';
 import { ClientDetails } from './pages/ClientDetails';
-import { Statistics } from './pages/Statistics';
 import { SettingsPage } from './pages/Settings';
-import { Kanban } from './pages/Kanban';
 import Quotes from './pages/Quotes';
-import { Management } from './pages/Management';
+import { Management } from './pages/Management/Management';
 import { LibraryPage as Library } from './pages/Library';
 import { HardwarePage } from './pages/Hardware';
 import { StepImport } from './pages/StepImport';
@@ -28,8 +26,8 @@ function App() {
             <Sidebar />
             <div className="flex-1 overflow-auto">
               <Routes>
-                <Route path="/" element={<Statistics />} />
-                <Route path="/kanban" element={<Kanban />} />
+                <Route path="/" element={<Management />} />
+                <Route path="/management" element={<Management />} />
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/import-step" element={<StepImport />} />
                 <Route path="/optimize" element={<Optimize />} />
@@ -39,7 +37,6 @@ function App() {
                 <Route path="/clients/:id" element={<ClientDetails />} />
                 <Route path="/quotes" element={<Quotes />} />
                 <Route path="/library" element={<Library />} />
-                <Route path="/management" element={<Management />} />
                 <Route path="/file-explorer" element={<FileExplorer />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Routes>

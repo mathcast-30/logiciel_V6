@@ -2,7 +2,6 @@ import { NavLink } from 'react-router-dom';
 import {
     Users2,
     FolderKanban,
-    KanbanSquare,
     Warehouse,
     Scissors,
     Settings,
@@ -11,7 +10,6 @@ import {
     Sun,
     Moon,
     Monitor,
-    BarChart3,
     Library,
     Wrench,
     FileUp,
@@ -21,10 +19,9 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 
 const navItems = [
-    { path: '/', icon: BarChart3, label: 'Statistiques' },
-    { path: '/projects', icon: FolderKanban, label: 'Projets' },
+    { path: '/management', icon: TrendingUp, label: 'Gestion' },
+    { path: '/projects', icon: FolderKanban, label: 'Projets (Détails)' },
     { path: '/import-step', icon: FileUp, label: 'Import 3D (STEP)' },
-    { path: '/kanban', icon: KanbanSquare, label: 'Tableau Kanban' },
     { path: '/quotes', icon: FileText, label: 'Devis' },
     { path: '/clients', icon: Users2, label: 'Clients' },
     { path: '/stock', icon: Warehouse, label: 'Matériaux & Stock' },
@@ -32,7 +29,6 @@ const navItems = [
     { path: '/optimize', icon: Scissors, label: 'Optimisation' },
     { path: '/library', icon: Library, label: 'Bibliothèque' },
     { path: '/file-explorer', icon: FolderArchive, label: 'Fichiers' },
-    { path: '/management', icon: TrendingUp, label: 'Gestion' },
     { path: '/settings', icon: Settings, label: 'Paramètres' },
 ];
 
