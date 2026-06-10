@@ -1,43 +1,52 @@
 import React, { useState } from 'react';
-import { Package, Ruler, Tag, Search, Edit2, Trash2, ChevronDown, ChevronRight, AlertTriangle, Plus, X } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronRight, Warehouse, Package, Ruler, Tag, Search, Edit2, AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { MaterialService, type MaterialWithStock, type Stock } from '../../services/materialService';
 import { ConfirmDialog } from '../UI/ConfirmDialog';
-import { type MaterialWithStock, type Stock, MaterialService } from '../../services/materialService';
+
+export interface MaterialForm {
+    name: string;
+    thickness: number;
+    cost_per_sqm: number;
+    price_type: 'm2' | 'm3' | 'unit';
+    supplier_ref: string;
+    has_grain: boolean;
+    is_panel: boolean;
+    initial_width: number;
+    initial_height: number;
+    initial_quantity: number;
+}
 
 interface MaterialsTabProps {
     materials: MaterialWithStock[];
     isLoading: boolean;
-    searchTerm: string;
     onRefresh: () => Promise<void>;
     onLoadDetails: (id: number) => Promise<void>;
+    
+    // Lifted state for cross-modal usage
+    isMaterialModalOpen: boolean;
+    setIsMaterialModalOpen: (isOpen: boolean) => void;
+    materialForm: MaterialForm;
+    setMaterialForm: (form: MaterialForm) => void;
+    onOpenMaterialModal: (initialData?: Partial<MaterialForm>) => void;
 }
 
-export const MaterialsTab: React.FC<MaterialsTabProps> = ({
+export function MaterialsTab({
     materials,
     isLoading,
-    searchTerm,
     onRefresh,
-    onLoadDetails
-}) => {
+    onLoadDetails,
+    isMaterialModalOpen,
+    setIsMaterialModalOpen,
+    materialForm,
+    setMaterialForm,
+    onOpenMaterialModal
+}: MaterialsTabProps) {
+    const [searchTerm, setSearchTerm] = useState('');
     const [expandedMaterial, setExpandedMaterial] = useState<number | null>(null);
-    const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
-    const [isStockModalOpen, setIsStockModalOpen] = useState(false);
-    
     const [selectedMaterialId, setSelectedMaterialId] = useState<number | null>(null);
     const [editingStockId, setEditingStockId] = useState<number | null>(null);
-
-    const [materialForm, setMaterialForm] = useState({
-        name: '',
-        thickness: 18,
-        cost_per_sqm: 0,
-        price_type: 'm2' as 'm2' | 'm3' | 'unit',
-        supplier_ref: '',
-        has_grain: false,
-        is_panel: true,
-        initial_width: 2800,
-        initial_height: 2070,
-        initial_quantity: 1
-    });
+    const [isStockModalOpen, setIsStockModalOpen] = useState(false);
 
     const [stockForm, setStockForm] = useState({
         width: 2800, height: 2070, quantity: 1, is_offcut: false, label: '', grain_direction: 1
@@ -196,179 +205,207 @@ export const MaterialsTab: React.FC<MaterialsTabProps> = ({
     );
 
     return (
-        <div className="space-y-4">
-            {/* Header actions (moved from Stock.tsx) */}
-            <div className="flex justify-end mb-4">
-                <button
-                    onClick={() => setIsMaterialModalOpen(true)}
-                    className="btn-primary flex items-center gap-2 whitespace-nowrap"
-                >
-                    <Plus className="h-5 w-5" />
-                    Nouveau Matériau
-                </button>
-            </div>
-
-            {filteredMaterials.length === 0 && !isLoading ? (
-                <div className="card">
-                    <div className="empty-state py-16">
-                        <Search className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                        <p className="text-slate-500">Aucun matériau trouvé pour "{searchTerm}"</p>
+        <div className="space-y-6">
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h1 className="page-title flex items-center gap-3">
+                        <Warehouse className="h-8 w-8 text-blue-500" />
+                        Gestion du Stock
+                    </h1>
+                    <p className="text-slate-500 mt-1">
+                        Gérez vos panneaux et bois massif.
+                    </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="relative group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Rechercher un panneau..."
+                            className="input-field pl-10 w-full md:w-64"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
+                    <button
+                        onClick={() => onOpenMaterialModal()}
+                        className="btn-primary flex items-center gap-2 whitespace-nowrap"
+                    >
+                        <Plus className="h-5 w-5" />
+                        Nouveau Matériau
+                    </button>
+                </div>
+            </header>
+
+            {isLoading ? (
+                <div className="flex justify-center py-20">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                 </div>
             ) : (
-                filteredMaterials.map((material) => (
-                    <div key={material.id} className="card overflow-hidden group">
-                        <div
-                            className={`p-5 flex items-center justify-between cursor-pointer transition-colors ${expandedMaterial === material.id ? 'bg-slate-50 dark:bg-slate-800/50' : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'}`}
-                            onClick={() => {
-                                if (expandedMaterial === material.id) {
-                                    setExpandedMaterial(null);
-                                } else {
-                                    setExpandedMaterial(material.id);
-                                    onLoadDetails(material.id);
-                                }
-                            }}
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-blue-500 shadow-sm">
-                                    <Package className="h-6 w-6" />
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="font-semibold text-slate-800 dark:text-white text-lg">{material.name}</h3>
-                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase ${material.is_panel
-                                            ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                            : 'bg-amber-100 text-amber-700 border border-amber-200'
-                                            }`}>
-                                            {material.is_panel ? 'Panneau' : 'Bois Massif'}
-                                        </span>
-                                        {material.has_grain && (
-                                            <span className="badge badge-amber">Fil du bois</span>
-                                        )}
-                                        {getTotalStock(material) < 2 && (
-                                            <span className="flex items-center gap-1 text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold animate-pulse">
-                                                <AlertTriangle className="h-3 w-3" /> STOCK BAS
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
-                                        <span className="flex items-center gap-1">
-                                            <Ruler className="h-3 w-3" />
-                                            {material.thickness} mm
-                                        </span>
-                                        {material.supplier_ref && (
-                                            <span className="text-xs bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-300">
-                                                Ref: {material.supplier_ref}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="text-right">
-                                    <div className="text-2xl font-bold text-amber-600 dark:text-amber-500">{getTotalStock(material)}</div>
-                                    <div className="text-xs text-slate-500 dark:text-slate-400">{getStockArea(material)} m²</div>
-                                </div>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); openStockModal(material.id); }}
-                                    className="btn-success !py-2 !px-3"
-                                    title="Ajouter du stock"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleDeleteMaterial(material.id); }}
-                                    className="bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-lg transition-colors !py-2 !px-3 flex items-center justify-center"
-                                    title="Supprimer le matériau"
-                                >
-                                    <X className="h-4 w-4" />
-                                </button>
-                                <div className="p-1 text-slate-400 group-hover:text-slate-600 transition-colors">
-                                    {expandedMaterial === material.id ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-                                </div>
+                <div className="space-y-4">
+                    {filteredMaterials.length === 0 ? (
+                        <div className="card">
+                            <div className="empty-state py-16">
+                                <Search className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                                <p className="text-slate-500">Aucun matériau trouvé pour "{searchTerm}"</p>
                             </div>
                         </div>
-
-                        {expandedMaterial === material.id && (
-                            <div className="border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-6 animate-fade-in">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h4 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                                        <Ruler className="h-4 w-4" />
-                                        Inventaire des formats
-                                    </h4>
-                                    <button
-                                        onClick={() => handleDeleteMaterial(material.id)}
-                                        className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-all font-bold"
-                                    >
-                                        <Trash2 className="h-3 w-3" />
-                                        Supprimer le matériau
-                                    </button>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {material.stock_items?.map((stock) => (
-                                        <div key={stock.id} className="relative p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-400 text-slate-800 transition-all bg-white dark:bg-slate-800/50 group/stock">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase shadow-sm ${stock.is_offcut ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                                                    {stock.is_offcut ? 'Chute' : 'Panneau'}
-                                                </div>
-                                                <div className="flex gap-1">
-                                                    <button
-                                                        onClick={() => openEditStockModal(material.id, stock)}
-                                                        className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
-                                                        title="Modifier"
-                                                    >
-                                                        <Edit2 className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteStock(stock.id, material.id)}
-                                                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                                        title="Supprimer"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-slate-500 text-sm font-semibold">Dimensions</span>
-                                                    <span className="font-bold text-slate-800">
-                                                        {stock.width} × {stock.height} mm
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-slate-500 text-sm font-semibold">Quantité</span>
-                                                    <span className="font-bold text-lg text-amber-600">
-                                                        {stock.quantity}
-                                                    </span>
-                                                </div>
-                                                {stock.label && (
-                                                    <div className="flex items-center gap-1 text-xs text-slate-500 mt-2">
-                                                        <Tag className="h-3 w-3" />
-                                                        {stock.label}
-                                                    </div>
+                    ) : (
+                        filteredMaterials.map((material) => (
+                            <div key={material.id} className="card overflow-hidden group">
+                                <div
+                                    className={`p-5 flex items-center justify-between cursor-pointer transition-colors ${expandedMaterial === material.id ? 'bg-slate-50 dark:bg-slate-800/50' : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'}`}
+                                    onClick={() => {
+                                        if (expandedMaterial === material.id) {
+                                            setExpandedMaterial(null);
+                                        } else {
+                                            setExpandedMaterial(material.id);
+                                            onLoadDetails(material.id);
+                                        }
+                                    }}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-blue-500 shadow-sm">
+                                            <Package className="h-6 w-6" />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-semibold text-slate-800 dark:text-white text-lg">{material.name}</h3>
+                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase ${material.is_panel
+                                                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                                    : 'bg-amber-100 text-amber-700 border border-amber-200'
+                                                    }`}>
+                                                    {material.is_panel ? 'Panneau' : 'Bois Massif'}
+                                                </span>
+                                                {material.has_grain && (
+                                                    <span className="badge badge-amber">Fil du bois</span>
                                                 )}
-                                                <div className="flex items-center gap-1 text-xs text-slate-400 mt-1">
-                                                    <Ruler className={`h-3 w-3 ${stock.grain_direction === 2 ? 'rotate-90' : ''}`} />
-                                                    Fil: {stock.grain_direction === 1 ? 'Horizontal' : 'Vertical'}
-                                                </div>
+                                                {getTotalStock(material) < 2 && (
+                                                    <span className="flex items-center gap-1 text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold animate-pulse">
+                                                        <AlertTriangle className="h-3 w-3" /> STOCK BAS
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
+                                                <span className="flex items-center gap-1">
+                                                    <Ruler className="h-3 w-3" />
+                                                    {material.thickness} mm
+                                                </span>
+                                                {material.supplier_ref && (
+                                                    <span className="text-xs bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-300">
+                                                        Ref: {material.supplier_ref}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
-                                    ))}
-                                    {(!material.stock_items || material.stock_items.length === 0) && (
-                                        <div className="col-span-full py-8 text-center text-slate-400 italic">
-                                            Aucun panneau en stock pour ce matériau.
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-right">
+                                            <div className="text-2xl font-bold text-amber-600 dark:text-amber-500">{getTotalStock(material)}</div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400">{getStockArea(material)} m²</div>
                                         </div>
-                                    )}
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); openStockModal(material.id); }}
+                                            className="btn-success !py-2 !px-3"
+                                            title="Ajouter du stock"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteMaterial(material.id); }}
+                                            className="bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-lg transition-colors !py-2 !px-3 flex items-center justify-center"
+                                            title="Supprimer le matériau"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                        <div className="p-1 text-slate-400 group-hover:text-slate-600 transition-colors">
+                                            {expandedMaterial === material.id ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                                        </div>
+                                    </div>
                                 </div>
+
+                                {expandedMaterial === material.id && (
+                                    <div className="border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-6 animate-fade-in">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                                <Ruler className="h-4 w-4" />
+                                                Inventaire des formats
+                                            </h4>
+                                            <button
+                                                onClick={() => handleDeleteMaterial(material.id)}
+                                                className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-all font-bold"
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                                Supprimer le matériau
+                                            </button>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {material.stock_items?.map((stock) => (
+                                                <div key={stock.id} className="relative p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-400 text-slate-800 transition-all bg-white dark:bg-slate-800/50 group/stock">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase shadow-sm ${stock.is_offcut ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                            {stock.is_offcut ? 'Chute' : 'Panneau'}
+                                                        </div>
+                                                        <div className="flex gap-1">
+                                                            <button
+                                                                onClick={() => openEditStockModal(material.id, stock)}
+                                                                className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                                                                title="Modifier"
+                                                            >
+                                                                <Edit2 className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteStock(stock.id, material.id)}
+                                                                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                                title="Supprimer"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-slate-500 text-sm font-semibold">Dimensions</span>
+                                                            <span className="font-bold text-slate-800">
+                                                                {stock.width} × {stock.height} mm
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-slate-500 text-sm font-semibold">Quantité</span>
+                                                            <span className="font-bold text-lg text-amber-600">
+                                                                {stock.quantity}
+                                                            </span>
+                                                        </div>
+                                                        {stock.label && (
+                                                            <div className="flex items-center gap-1 text-xs text-slate-500 mt-2">
+                                                                <Tag className="h-3 w-3" />
+                                                                {stock.label}
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center gap-1 text-xs text-slate-400 mt-1">
+                                                            <Ruler className={`h-3 w-3 ${stock.grain_direction === 2 ? 'rotate-90' : ''}`} />
+                                                            Fil: {stock.grain_direction === 1 ? 'Horizontal' : 'Vertical'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {(!material.stock_items || material.stock_items.length === 0) && (
+                                                <div className="col-span-full py-8 text-center text-slate-400 italic">
+                                                    Aucun panneau en stock pour ce matériau.
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
-                ))
+                        ))
+                    )}
+                </div>
             )}
 
             {/* Material Modal */}
-            <div className="modal-overlay" style={{ display: isMaterialModalOpen ? 'flex' : 'none' }} onClick={() => setIsMaterialModalOpen(false)}>
+            <div className="modal-overlay" style={{ display: isMaterialModalOpen ? undefined : 'none' }} onClick={() => setIsMaterialModalOpen(false)}>
                 <div className="modal-content" onClick={e => e.stopPropagation()}>
                     <div className="modal-header">
                         <h2 className="text-xl font-bold text-slate-800">Nouveau Matériau</h2>
@@ -491,7 +528,7 @@ export const MaterialsTab: React.FC<MaterialsTabProps> = ({
             </div>
 
             {/* Stock Modal */}
-            <div className="modal-overlay" style={{ display: isStockModalOpen ? 'flex' : 'none' }} onClick={() => setIsStockModalOpen(false)}>
+            <div className="modal-overlay" style={{ display: isStockModalOpen ? undefined : 'none' }} onClick={() => setIsStockModalOpen(false)}>
                 <div className="modal-content" onClick={e => e.stopPropagation()}>
                     <div className="modal-header">
                         <h2 className="text-xl font-bold text-slate-800">
@@ -548,12 +585,12 @@ export const MaterialsTab: React.FC<MaterialsTabProps> = ({
 
             <ConfirmDialog
                 isOpen={confirmDialog.isOpen}
-                onClose={() => setConfirmDialog(p => ({ ...p, isOpen: false }))}
-                onConfirm={confirmDialog.onConfirm}
                 title={confirmDialog.title}
                 message={confirmDialog.message}
                 type={confirmDialog.type}
+                onConfirm={confirmDialog.onConfirm}
+                onCancel={() => setConfirmDialog(p => ({ ...p, isOpen: false }))}
             />
         </div>
     );
-};
+}

@@ -66,8 +66,8 @@ export interface AvailabilityResponse {
 }
 
 export const MaterialService = {
-    getAll: async (): Promise<Material[]> => {
-        const response = await api.get<Material[]>('materials/');
+    getAll: async (signal?: AbortSignal): Promise<Material[]> => {
+        const response = await api.get<Material[]>('materials/', { signal });
         return response.data;
     },
 
@@ -105,8 +105,8 @@ export const MaterialService = {
     },
 
     // Edge Bands
-    getEdgeBands: async (): Promise<EdgeBand[]> => {
-        const response = await api.get<EdgeBand[]>('materials/edge-bands');
+    getEdgeBands: async (signal?: AbortSignal): Promise<EdgeBand[]> => {
+        const response = await api.get<EdgeBand[]>('materials/edge-bands', { signal });
         return response.data;
     },
 

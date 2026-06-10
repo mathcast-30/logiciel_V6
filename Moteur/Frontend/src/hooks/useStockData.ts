@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { type MaterialWithStock, type EdgeBand, MaterialService } from '../services/materialService';
 import { type Supplier, SupplierService } from '../services/supplierService';
 
@@ -37,52 +37,88 @@ export const useStockData = (): StockData => {
 
     const [errors, setErrors] = useState<Record<string, string | null>>({});
 
+    const abortControllers = useRef({
+        materials: null as AbortController | null,
+        edgeBands: null as AbortController | null,
+        suppliers: null as AbortController | null,
+    });
+
     const refreshMaterials = useCallback(async () => {
+        if (abortControllers.current.materials) {
+            abortControllers.current.materials.abort();
+        }
+        const controller = new AbortController();
+        abortControllers.current.materials = controller;
+
         setIsLoadingMaterials(true);
         setErrors(prev => ({ ...prev, materials: null }));
         try {
-            const data = await MaterialService.getAll();
+            const data = await MaterialService.getAll(controller.signal);
             setMaterials(data);
-        } catch (err) {
-            const message = err instanceof Error ? err.message : 'Erreur chargement matériaux';
-            setErrors(prev => ({ ...prev, materials: message }));
-            console.error('Error loading materials:', err);
+        } catch (err: any) {
+            if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+                const message = err instanceof Error ? err.message : 'Erreur chargement matériaux';
+                setErrors(prev => ({ ...prev, materials: message }));
+                console.error('Error loading materials:', err);
+            }
         } finally {
-            setIsLoadingMaterials(false);
+            if (!controller.signal.aborted) {
+                setIsLoadingMaterials(false);
+            }
         }
     }, []);
 
     const refreshEdgeBands = useCallback(async () => {
+        if (abortControllers.current.edgeBands) {
+            abortControllers.current.edgeBands.abort();
+        }
+        const controller = new AbortController();
+        abortControllers.current.edgeBands = controller;
+
         setIsLoadingEdgeBands(true);
         setErrors(prev => ({ ...prev, edgeBands: null }));
         try {
-            const data = await MaterialService.getEdgeBands();
+            const data = await MaterialService.getEdgeBands(controller.signal);
             setEdgeBands(data);
-        } catch (err) {
-            const message = err instanceof Error ? err.message : 'Erreur chargement chants';
-            setErrors(prev => ({ ...prev, edgeBands: message }));
-            console.error('Error loading edge bands:', err);
+        } catch (err: any) {
+            if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+                const message = err instanceof Error ? err.message : 'Erreur chargement chants';
+                setErrors(prev => ({ ...prev, edgeBands: message }));
+                console.error('Error loading edge bands:', err);
+            }
         } finally {
-            setIsLoadingEdgeBands(false);
+            if (!controller.signal.aborted) {
+                setIsLoadingEdgeBands(false);
+            }
         }
     }, []);
 
     const refreshSuppliers = useCallback(async () => {
+        if (abortControllers.current.suppliers) {
+            abortControllers.current.suppliers.abort();
+        }
+        const controller = new AbortController();
+        abortControllers.current.suppliers = controller;
+
         setIsLoadingSuppliers(true);
         setErrors(prev => ({ ...prev, suppliers: null }));
         try {
             const [data, stats] = await Promise.all([
-                SupplierService.getAll(),
-                SupplierService.getStats()
+                SupplierService.getAll(controller.signal),
+                SupplierService.getStats(controller.signal)
             ]);
             setSuppliers(data);
             setSupplierStats(stats);
-        } catch (err) {
-            const message = err instanceof Error ? err.message : 'Erreur chargement fournisseurs';
-            setErrors(prev => ({ ...prev, suppliers: message }));
-            console.error('Error loading suppliers:', err);
+        } catch (err: any) {
+            if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+                const message = err instanceof Error ? err.message : 'Erreur chargement fournisseurs';
+                setErrors(prev => ({ ...prev, suppliers: message }));
+                console.error('Error loading suppliers:', err);
+            }
         } finally {
-            setIsLoadingSuppliers(false);
+            if (!controller.signal.aborted) {
+                setIsLoadingSuppliers(false);
+            }
         }
     }, []);
 
@@ -101,6 +137,11 @@ export const useStockData = (): StockData => {
 
     useEffect(() => {
         refreshAll();
+        return () => {
+            if (abortControllers.current.materials) abortControllers.current.materials.abort();
+            if (abortControllers.current.edgeBands) abortControllers.current.edgeBands.abort();
+            if (abortControllers.current.suppliers) abortControllers.current.suppliers.abort();
+        };
     }, [refreshAll]);
 
     return {
