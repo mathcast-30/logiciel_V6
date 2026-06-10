@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { SupplierService, type Supplier, type SupplierMaterial, type ScrapedProduct, type ScrapingResult } from '../../services/supplierService';
 import { type MaterialWithStock } from '../../services/materialService';
 import { ConfirmDialog } from '../UI/ConfirmDialog';
-import { ErrorBoundary } from '../UI/ErrorBoundary';
+import { ErrorBoundary } from '../ErrorBoundary';
 
 export interface MaterialForm {
     name: string;

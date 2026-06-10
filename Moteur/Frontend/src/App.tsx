@@ -5,7 +5,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Projects } from './pages/Projects';
 import { Optimize } from './pages/Optimize';
-import { StockPage as Stock } from './pages/Stock';
+import Stock from './pages/Stock';
 import { Clients } from './pages/Clients';
 import { ClientDetails } from './pages/ClientDetails';
 import { SettingsPage } from './pages/Settings';
