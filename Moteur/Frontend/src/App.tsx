@@ -16,6 +16,7 @@ import { Management } from './pages/Management';
 import { LibraryPage as Library } from './pages/Library';
 import { HardwarePage } from './pages/Hardware';
 import { StepImport } from './pages/StepImport';
+import { FileExplorer } from './pages/FileExplorer';
 import { UnitConverter } from './components/Tools/UnitConverter';
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
                 <Route path="/quotes" element={<Quotes />} />
                 <Route path="/library" element={<Library />} />
                 <Route path="/management" element={<Management />} />
+                <Route path="/file-explorer" element={<FileExplorer />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Routes>
             </div>

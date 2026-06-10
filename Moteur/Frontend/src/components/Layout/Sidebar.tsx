@@ -15,7 +15,8 @@ import {
     Library,
     Wrench,
     FileUp,
-    TrendingUp
+    TrendingUp,
+    FolderArchive
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -30,6 +31,7 @@ const navItems = [
     { path: '/hardware', icon: Wrench, label: 'Quincaillerie' },
     { path: '/optimize', icon: Scissors, label: 'Optimisation' },
     { path: '/library', icon: Library, label: 'Bibliothèque' },
+    { path: '/file-explorer', icon: FolderArchive, label: 'Fichiers' },
     { path: '/management', icon: TrendingUp, label: 'Gestion' },
     { path: '/settings', icon: Settings, label: 'Paramètres' },
 ];
