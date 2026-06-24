@@ -8,6 +8,17 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
+  --color-primary:    #6C63FF;
+  --color-secondary:  #22C55E;
+  --color-accent:     #F97316;
+  --color-danger:     #EF4444;
+  --color-bg-main:    #0F0F1A;
+  --color-bg-card:    #1A1A2E;
+  --color-bg-sidebar: #12121F;
+  --color-border:     #2D2D44;
+  --color-text-main:  #E8E8F0;
+  --color-text-muted: #8888AA;
+
   /* Primary Brand Colors - Wood Inspired */
   --primary-50: #fdf8f6;
   --primary-100: #f2e8e5;

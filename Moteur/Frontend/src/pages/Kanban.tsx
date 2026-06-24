@@ -12,7 +12,7 @@ import type { Project } from '../services/projectService';
 import { toast } from 'sonner';
 
 const COLUMNS = [
-    { id: 'draft', title: 'Brouillon', icon: Circle, color: 'text-slate-500', bg: 'bg-slate-50 dark:bg-slate-900' },
+    { id: 'draft', title: 'Brouillon', icon: Circle, color: 'text-slate-500', bg: 'bg-theme-bg-card' },
     { id: 'validated', title: 'Validé', icon: CheckCircle2, color: 'text-blue-500', bg: 'bg-blue-50/50 dark:bg-blue-900/20' },
     { id: 'in_progress', title: 'En cours', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50/50 dark:bg-amber-900/20' },
     { id: 'done', title: 'Terminé', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50/50 dark:bg-emerald-900/20' }
@@ -106,7 +106,7 @@ export function Kanban() {
                         return (
                             <div
                                 key={column.id}
-                                className={`flex-1 flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 ${column.bg}`}
+                                className={`flex-1 flex flex-col rounded-xl border border-theme-primary/20 ${column.bg}`}
                                 onDragOver={handleDragOver}
                                 onDrop={(e) => handleDrop(e, column.id)}
                             >
@@ -129,7 +129,7 @@ export function Kanban() {
                                             draggable
                                             onDragStart={(e) => handleDragStart(e, project.id)}
                                             className={`
-                                                bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700
+                                                bg-theme-bg-main text-theme-text-main p-4 rounded-lg shadow-sm border border-theme-primary/20
                                                 cursor-move hover:shadow-md transition-all
                                                 ${draggingId === project.id ? 'opacity-50' : ''}
                                             `}
@@ -141,7 +141,7 @@ export function Kanban() {
                                                 </button>
                                             </div>
 
-                                            <p className="text-xs text-slate-500 mb-3 line-clamp-2">
+                                            <p className="text-xs text-theme-text-muted mb-3 line-clamp-2">
                                                 {project.description || "Pas de description"}
                                             </p>
 

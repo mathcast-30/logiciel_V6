@@ -260,10 +260,10 @@ export function SettingsPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="page-title flex items-center gap-3">
-                        <Settings className="h-8 w-8 text-slate-500 dark:text-slate-400" />
+                        <Settings className="h-8 w-8 text-theme-text-muted" />
                         Paramètres
                     </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">Configurez les valeurs par défaut de l'application</p>
+                    <p className="text-theme-text-muted mt-1">Configurez les valeurs par défaut de l'application</p>
                 </div>
                 <button
                     onClick={handleSave}
@@ -293,8 +293,8 @@ export function SettingsPage() {
             {/* Apparence - Thème */}
             <div className="card border-l-4 border-l-blue-500 dark:border-l-blue-500">
                 <div className="card-header flex items-center gap-2">
-                    <Settings className="h-5 w-5 text-blue-500" />
-                    <h2 className="font-semibold text-slate-800 dark:text-white">Apparence</h2>
+                    <Settings className="h-5 w-5 text-theme-primary" />
+                    <h2 className="font-semibold text-theme-text-main">Apparence</h2>
                 </div>
                 <div className="card-body">
                     <ThemeSelector />
@@ -304,8 +304,8 @@ export function SettingsPage() {
             {/* Espace de personnalisation du thème */}
             <div className="card">
                 <div className="card-header flex items-center gap-2">
-                    <Palette className="h-5 w-5 text-pink-500" />
-                    <h2 className="font-semibold text-slate-800 dark:text-white">Personnalisation du Thème</h2>
+                    <Palette className="h-5 w-5 text-theme-secondary" />
+                    <h2 className="font-semibold text-theme-text-main">Personnalisation du Thème</h2>
                 </div>
                 <div className="card-body">
                     <ThemeCustomizationPanel />
@@ -315,8 +315,8 @@ export function SettingsPage() {
             {/* Profils Utilisateur */}
             <div className="card border-l-4 border-l-purple-500 dark:border-l-purple-500">
                 <div className="card-header flex items-center gap-2">
-                    <Users className="h-5 w-5 text-purple-500" />
-                    <h2 className="font-semibold text-slate-800 dark:text-white">Profils Utilisateur</h2>
+                    <Users className="h-5 w-5 text-theme-accent" />
+                    <h2 className="font-semibold text-theme-text-main">Profils Utilisateur</h2>
                 </div>
                 <div className="card-body">
                     <UserProfiles />
@@ -325,10 +325,10 @@ export function SettingsPage() {
 
             {isRestoring && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl flex flex-col items-center border border-slate-200 dark:border-slate-700">
-                        <RefreshCcw className="h-10 w-10 text-blue-500 animate-spin mb-4" />
-                        <h3 className="text-xl font-bold dark:text-white">Restauration en cours...</h3>
-                        <p className="text-slate-500 dark:text-slate-400">Ne fermez pas cette page.</p>
+                    <div className="bg-theme-bg-card p-6 rounded-xl shadow-xl flex flex-col items-center border border-theme-primary/20">
+                        <RefreshCcw className="h-10 w-10 text-theme-primary animate-spin mb-4" />
+                        <h3 className="text-xl font-bold text-theme-text-main">Restauration en cours...</h3>
+                        <p className="text-theme-text-muted">Ne fermez pas cette page.</p>
                     </div>
                 </div>
             )}
@@ -337,8 +337,8 @@ export function SettingsPage() {
             <div className="card border-l-4 border-l-purple-500 dark:border-l-purple-500">
                 <div className="card-header flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <Database className="h-5 w-5 text-purple-500" />
-                        <h2 className="font-semibold text-slate-800 dark:text-white">Sauvegarde & Restauration</h2>
+                        <Database className="h-5 w-5 text-theme-accent" />
+                        <h2 className="font-semibold text-theme-text-main">Sauvegarde & Restauration</h2>
                     </div>
                     <div className="flex gap-2">
                         <label className="btn-secondary cursor-pointer flex items-center gap-2 !py-2 !px-3" title="Importer une sauvegarde" aria-label="Importer une sauvegarde">
@@ -368,9 +368,9 @@ export function SettingsPage() {
                         </div>
                     </div>
 
-                    <div className="border rounded-lg overflow-hidden dark:border-slate-700">
+                    <div className="border border-theme-primary/20 rounded-lg overflow-hidden">
                         <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
+                            <thead className="bg-theme-bg-main text-theme-text-muted">
                                 <tr>
                                     <th className="px-4 py-3">Date</th>
                                     <th className="px-4 py-3">Type</th>
@@ -379,10 +379,10 @@ export function SettingsPage() {
                                     <th className="px-4 py-3 text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                            <tbody className="divide-y divide-theme-primary/10">
                                 {backups.map((backup) => (
-                                    <tr key={backup.filename} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                        <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-200">
+                                    <tr key={backup.filename} className="hover:bg-theme-bg-main">
+                                        <td className="px-4 py-3 font-medium text-theme-text-main">
                                             {new Date(backup.created_at).toLocaleString()}
                                         </td>
                                         <td className="px-4 py-3">
@@ -393,10 +393,10 @@ export function SettingsPage() {
                                                 {backup.type.toUpperCase()}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
+                                        <td className="px-4 py-3 text-theme-text-muted">
                                             {formatBytes(backup.size_bytes)}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-400 dark:text-slate-500 text-xs font-mono">
+                                        <td className="px-4 py-3 text-theme-text-muted text-xs font-mono">
                                             {backup.filename}
                                         </td>
                                         <td className="px-4 py-3 text-right flex justify-end gap-2">
@@ -434,7 +434,7 @@ export function SettingsPage() {
                                 ))}
                                 {backups.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500 italic">
+                                        <td colSpan={5} className="px-4 py-8 text-center text-theme-text-muted italic">
                                             Aucune sauvegarde disponible
                                         </td>
                                     </tr>
@@ -448,13 +448,13 @@ export function SettingsPage() {
             {/* Cutting Settings */}
             <div className="card">
                 <div className="card-header flex items-center gap-2">
-                    <Sliders className="h-5 w-5 text-blue-500" />
-                    <h2 className="font-semibold text-slate-800 dark:text-white">Paramètres de Découpe</h2>
+                    <Sliders className="h-5 w-5 text-theme-primary" />
+                    <h2 className="font-semibold text-theme-text-main">Paramètres de Découpe</h2>
                 </div>
                 <div className="card-body">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label htmlFor="kerf" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            <label htmlFor="kerf" className="block text-sm font-medium text-theme-text-main mb-2">
                                 Épaisseur de lame par défaut (mm)
                             </label>
                             <input
@@ -468,10 +468,10 @@ export function SettingsPage() {
                                 value={settings.defaultKerf}
                                 onChange={e => setSettings({ ...settings, defaultKerf: parseFloat(e.target.value) })}
                             />
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Kerf - largeur de trait de coupe</p>
+                            <p className="text-xs text-theme-text-muted mt-1">Kerf - largeur de trait de coupe</p>
                         </div>
                         <div>
-                            <label htmlFor="trim-margin" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            <label htmlFor="trim-margin" className="block text-sm font-medium text-theme-text-main mb-2">
                                 Marge de ponçage par défaut (mm)
                             </label>
                             <input
@@ -485,10 +485,10 @@ export function SettingsPage() {
                                 value={settings.defaultTrimMargin}
                                 onChange={e => setSettings({ ...settings, defaultTrimMargin: parseFloat(e.target.value) })}
                             />
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Ajouté à chaque côté de la pièce</p>
+                            <p className="text-xs text-theme-text-muted mt-1">Ajouté à chaque côté de la pièce</p>
                         </div>
                         <div>
-                            <label htmlFor="safety-margin" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            <label htmlFor="safety-margin" className="block text-sm font-medium text-theme-text-main mb-2">
                                 Marge de sécurité bord panneau (mm)
                             </label>
                             <input
@@ -502,10 +502,10 @@ export function SettingsPage() {
                                 value={settings.defaultSafetyMargin}
                                 onChange={e => setSettings({ ...settings, defaultSafetyMargin: parseFloat(e.target.value) })}
                             />
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Distance minimale des bords du panneau</p>
+                            <p className="text-xs text-theme-text-muted mt-1">Distance minimale des bords du panneau</p>
                         </div>
                         <div>
-                            <label htmlFor="min-offcut" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            <label htmlFor="min-offcut" className="block text-sm font-medium text-theme-text-main mb-2">
                                 Taille minimale des chutes (mm)
                             </label>
                             <input
@@ -519,7 +519,7 @@ export function SettingsPage() {
                                 value={settings.minOffcutSize}
                                 onChange={e => setSettings({ ...settings, minOffcutSize: parseInt(e.target.value) })}
                             />
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Les chutes plus petites sont ignorées</p>
+                            <p className="text-xs text-theme-text-muted mt-1">Les chutes plus petites sont ignorées</p>
                         </div>
                     </div>
                 </div>
@@ -528,13 +528,13 @@ export function SettingsPage() {
             {/* Export Settings */}
             <div className="card">
                 <div className="card-header flex items-center gap-2">
-                    <FolderOutput className="h-5 w-5 text-emerald-500" />
-                    <h2 className="font-semibold text-slate-800 dark:text-white">Exports</h2>
+                    <FolderOutput className="h-5 w-5 text-theme-secondary" />
+                    <h2 className="font-semibold text-theme-text-main">Exports</h2>
                 </div>
                 <div className="card-body">
                     <div className="space-y-4">
                         <div>
-                            <label htmlFor="export-path" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            <label htmlFor="export-path" className="block text-sm font-medium text-theme-text-main mb-2">
                                 Dossier d'export par défaut
                             </label>
                             <input
@@ -548,7 +548,7 @@ export function SettingsPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                            <label className="block text-sm font-medium text-theme-text-main mb-3">
                                 Formats d'export par défaut
                             </label>
                             <div className="flex flex-wrap gap-3">
@@ -556,8 +556,8 @@ export function SettingsPage() {
                                     <label key={format} className={`
                                         flex items-center gap-2 px-4 py-2.5 rounded-xl cursor-pointer transition-all
                                         ${settings.exportFormats.includes(format)
-                                            ? 'bg-emerald-100 text-emerald-700 border-2 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                            : 'bg-slate-100 text-slate-600 border-2 border-transparent hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+                                            ? 'bg-theme-primary/10 text-theme-primary border-2 border-theme-primary'
+                                            : 'bg-theme-bg-main text-theme-text-muted border-2 border-transparent hover:bg-theme-bg-card'
                                         }
                                     `}>
                                         <input
@@ -583,13 +583,13 @@ export function SettingsPage() {
             {/* Label Settings */}
             <div className="card">
                 <div className="card-header flex items-center gap-2">
-                    <Printer className="h-5 w-5 text-amber-500" />
-                    <h2 className="font-semibold text-slate-800 dark:text-white">Étiquettes QR Code</h2>
+                    <Printer className="h-5 w-5 text-theme-accent" />
+                    <h2 className="font-semibold text-theme-text-main">Étiquettes QR Code</h2>
                 </div>
                 <div className="card-body">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label htmlFor="label-width" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            <label htmlFor="label-width" className="block text-sm font-medium text-theme-text-main mb-2">
                                 Largeur étiquette (mm)
                             </label>
                             <input
@@ -605,7 +605,7 @@ export function SettingsPage() {
                             />
                         </div>
                         <div>
-                            <label htmlFor="label-height" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            <label htmlFor="label-height" className="block text-sm font-medium text-theme-text-main mb-2">
                                 Hauteur étiquette (mm)
                             </label>
                             <input
@@ -621,7 +621,7 @@ export function SettingsPage() {
                             />
                         </div>
                         <div>
-                            <label htmlFor="labels-per-row" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            <label htmlFor="labels-per-row" className="block text-sm font-medium text-theme-text-main mb-2">
                                 Étiquettes par rangée
                             </label>
                             <input
@@ -637,7 +637,7 @@ export function SettingsPage() {
                             />
                         </div>
                         <div>
-                            <label htmlFor="labels-per-sheet" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            <label htmlFor="labels-per-sheet" className="block text-sm font-medium text-theme-text-main mb-2">
                                 Étiquettes par feuille A4
                             </label>
                             <input

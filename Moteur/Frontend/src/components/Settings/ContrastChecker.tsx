@@ -53,10 +53,10 @@ export function ContrastChecker() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                    <h3 className="text-lg font-semibold text-theme-text-muted">
                         Vérification du Contraste WCAG
                     </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                    <p className="text-sm text-theme-text-muted mt-1">
                         Assurez-vous que votre palette est accessible
                     </p>
                 </div>
@@ -80,14 +80,14 @@ export function ContrastChecker() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Texte sur arrière-plan */}
-                <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                <div className="p-4 rounded-lg border border-theme-primary/20">
                     <div className="flex items-center gap-2 mb-3">
                         {contrastResults.text.isAccessible ? (
                             <CheckCircle size={20} className="text-green-600" />
                         ) : (
                             <AlertCircle size={20} className="text-red-600" />
                         )}
-                        <span className="font-medium text-slate-900 dark:text-slate-100">
+                        <span className="font-medium text-theme-text-muted">
                             Texte sur fond
                         </span>
                     </div>
@@ -98,50 +98,50 @@ export function ContrastChecker() {
                         <p className="font-medium">Aperçu du texte</p>
                         <p className="text-sm opacity-75">Ceci est du texte secondaire</p>
                     </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
+                    <p className="text-xs text-theme-text-muted mb-2">
                         {contrastResults.text.message}
                     </p>
-                    <p className="text-sm font-mono text-slate-700 dark:text-slate-300">
+                    <p className="text-sm font-mono text-theme-text-muted">
                         Ratio: {contrastResults.text.ratio}:1
                     </p>
                 </div>
 
                 {/* Bouton Primaire */}
-                <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                <div className="p-4 rounded-lg border border-theme-primary/20">
                     <div className="flex items-center gap-2 mb-3">
                         {contrastResults.primaryBtn.isAccessible ? (
                             <CheckCircle size={20} className="text-green-600" />
                         ) : (
                             <AlertCircle size={20} className="text-red-600" />
                         )}
-                        <span className="font-medium text-slate-900 dark:text-slate-100">
+                        <span className="font-medium text-theme-text-muted">
                             Bouton primaire
                         </span>
                     </div>
                     <div
-                        className="px-4 py-2 rounded-lg mb-3 text-center text-white font-medium"
+                        className="px-4 py-2 rounded-lg mb-3 text-center text-theme-text-main font-medium"
                         style={primaryBtnStyle}
                     >
                         Cliquez-moi
                     </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
+                    <p className="text-xs text-theme-text-muted mb-2">
                         {contrastResults.primaryBtn.message}
                     </p>
-                    <p className="text-sm font-mono text-slate-700 dark:text-slate-300">
+                    <p className="text-sm font-mono text-theme-text-muted">
                         Ratio: {contrastResults.primaryBtn.ratio}:1
                     </p>
                 </div>
 
 
                 {/* Message Succès */}
-                <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                <div className="p-4 rounded-lg border border-theme-primary/20">
                     <div className="flex items-center gap-2 mb-3">
                         {contrastResults.successMsg.isAccessible ? (
                             <CheckCircle size={20} className="text-green-600" />
                         ) : (
                             <AlertCircle size={20} className="text-red-600" />
                         )}
-                        <span className="font-medium text-slate-900 dark:text-slate-100">
+                        <span className="font-medium text-theme-text-muted">
                             Message de succès
                         </span>
                     </div>
@@ -151,24 +151,24 @@ export function ContrastChecker() {
                     >
                         {'✅'} Opération réussie
                     </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
+                    <p className="text-xs text-theme-text-muted mb-2">
                         {contrastResults.successMsg.message}
                     </p>
-                    <p className="text-sm font-mono text-slate-700 dark:text-slate-300">
+                    <p className="text-sm font-mono text-theme-text-muted">
                         Ratio: {contrastResults.successMsg.ratio}:1
                     </p>
                 </div>
 
 
                 {/* Message Erreur */}
-                <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                <div className="p-4 rounded-lg border border-theme-primary/20">
                     <div className="flex items-center gap-2 mb-3">
                         {contrastResults.errorMsg.isAccessible ? (
                             <CheckCircle size={20} className="text-green-600" />
                         ) : (
                             <AlertCircle size={20} className="text-red-600" />
                         )}
-                        <span className="font-medium text-slate-900 dark:text-slate-100">
+                        <span className="font-medium text-theme-text-muted">
                             Message d'erreur
                         </span>
                     </div>
@@ -178,10 +178,10 @@ export function ContrastChecker() {
                     >
                         {'❌'} Erreur lors de l'opération
                     </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
+                    <p className="text-xs text-theme-text-muted mb-2">
                         {contrastResults.errorMsg.message}
                     </p>
-                    <p className="text-sm font-mono text-slate-700 dark:text-slate-300">
+                    <p className="text-sm font-mono text-theme-text-muted">
                         Ratio: {contrastResults.errorMsg.ratio}:1
                     </p>
                 </div>

@@ -48,10 +48,10 @@ export function ThemeSelector() {
     return (
         <div className="space-y-4">
             <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                <h3 className="text-lg font-semibold text-theme-text-muted">
                     Th�me
                 </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                <p className="text-sm text-theme-text-muted mt-1">
                     S�lectionnez votre th�me pr�f�r�
                 </p>
             </div>
@@ -64,7 +64,7 @@ export function ThemeSelector() {
                         className={`p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-2 ${
                             theme === value
                                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
+                                : 'border-theme-primary/20 bg-theme-bg-card hover:border-theme-primary/40'
                         }`}
                     >
                         <Icon
@@ -72,10 +72,10 @@ export function ThemeSelector() {
                             className={
                                 theme === value
                                     ? 'text-blue-600'
-                                    : 'text-slate-600 dark:text-slate-400'
+                                    : 'text-theme-text-muted'
                             }
                         />
-                        <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                        <span className="text-sm font-medium text-theme-text-muted">
                             {label}
                         </span>
                     </button>

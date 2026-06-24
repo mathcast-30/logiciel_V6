@@ -132,10 +132,10 @@ export function ThemeCustomizationPanel() {
         <div className="space-y-6">
             {/* En-tête */}
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+                <h1 className="text-3xl font-bold text-theme-text-muted mb-2">
                     Personnalisation du Thème
                 </h1>
-                <p className="text-slate-600 dark:text-slate-400">
+                <p className="text-theme-text-muted">
                     Configurez l'apparence de votre interface de menuiserie exactement comme vous la souhaitez
                 </p>
             </div>
@@ -149,7 +149,7 @@ export function ThemeCustomizationPanel() {
                         className={`p-4 rounded-lg border-2 transition-all text-left hover:shadow-md ${
                             activeTab === tab.id
                                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
-                                : 'border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500'
+                                : 'border-theme-primary/20 hover:border-theme-primary/40'
                         }`}
                     >
                         <div className="flex items-start justify-between mb-2">
@@ -157,7 +157,7 @@ export function ThemeCustomizationPanel() {
                                 className={`${
                                     activeTab === tab.id
                                         ? 'text-blue-600 dark:text-blue-400'
-                                        : 'text-slate-600 dark:text-slate-400'
+                                        : 'text-theme-text-muted'
                                 }`}
                             >
                                 {tab.icon}
@@ -169,13 +169,13 @@ export function ThemeCustomizationPanel() {
                         <h3
                             className={`font-semibold text-sm mb-1 ${
                                 activeTab === tab.id
-                                    ? 'text-slate-900 dark:text-slate-100'
-                                    : 'text-slate-800 dark:text-slate-200'
+                                    ? 'text-theme-text-muted'
+                                    : 'text-theme-text-muted'
                             }`}
                         >
                             {tab.label}
                         </h3>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                        <p className="text-xs text-theme-text-muted">
                             {tab.description}
                         </p>
                     </button>
@@ -183,7 +183,7 @@ export function ThemeCustomizationPanel() {
             </div>
 
             {/* Contenu principal */}
-            <div className="border-t border-slate-200 dark:border-slate-700 pt-8">
+            <div className="border-t border-theme-primary/20 pt-8">
                 {activeTabData && (
                     <div className="space-y-4">
                         <div className="flex items-center gap-3 mb-6">
@@ -191,16 +191,16 @@ export function ThemeCustomizationPanel() {
                                 {activeTabData.icon}
                             </div>
                             <div>
-                                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                                <h2 className="text-2xl font-bold text-theme-text-muted">
                                     {activeTabData.label}
                                 </h2>
-                                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                                <p className="text-sm text-theme-text-muted mt-1">
                                     {activeTabData.description}
                                 </p>
                             </div>
                         </div>
 
-                        <div className="bg-slate-50 dark:bg-slate-950/50 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+                        <div className="bg-theme-bg-card/50 rounded-lg p-6 border border-theme-primary/20">
                             {activeTabData.content}
                         </div>
                     </div>
