@@ -6,30 +6,30 @@ export function ThemePreview() {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+                <h3 className="text-lg font-semibold text-theme-text-muted mb-4">
                     Aperçu complet du thème
                 </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+                <p className="text-sm text-theme-text-muted mb-6">
                     Voici comment votre interface personnalisée se présente dans différents contextes
                 </p>
             </div>
 
             {/* Palette complète */}
             <div>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+                <h4 className="text-sm font-semibold text-theme-text-muted mb-3">
                     Palette de couleurs
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                     {Object.entries(colors).map(([key, color]) => (
                         <div key={key} className="text-center">
                             <div
-                                className="w-full h-24 rounded-lg mb-2 border-2 border-slate-300 dark:border-slate-600 shadow-md hover:shadow-lg transition-shadow"
+                                className="w-full h-24 rounded-lg mb-2 border-2 border-theme-primary/20 shadow-md hover:shadow-lg transition-shadow"
                                 style={{ backgroundColor: color }}
                             />
-                            <p className="text-xs font-medium text-slate-900 dark:text-slate-100 capitalize">
+                            <p className="text-xs font-medium text-theme-text-muted capitalize">
                                 {key}
                             </p>
-                            <p className="text-xs text-slate-600 dark:text-slate-400 font-mono mt-1">
+                            <p className="text-xs text-theme-text-muted font-mono mt-1">
                                 {color.toUpperCase()}
                             </p>
                         </div>
@@ -44,7 +44,7 @@ export function ThemePreview() {
                     className="p-6 rounded-lg border-2"
                     style={{ backgroundColor: colors.surface, borderColor: colors.border }}
                 >
-                    <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4"
+                    <h4 className="text-sm font-semibold text-theme-text-muted mb-4"
                         style={{ color: colors.text }}>
                         Exemple de formulaire
                     </h4>
@@ -163,7 +163,7 @@ export function ThemePreview() {
 
             {/* Boutons */}
             <div>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+                <h4 className="text-sm font-semibold text-theme-text-muted mb-3">
                     États des boutons
                 </h4>
                 <div
@@ -172,25 +172,25 @@ export function ThemePreview() {
                 >
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                         <button
-                            className="px-4 py-2 rounded font-medium text-white transition-opacity hover:opacity-90 text-sm"
+                            className="px-4 py-2 rounded font-medium text-theme-text-main transition-opacity hover:opacity-90 text-sm"
                             style={{ backgroundColor: colors.primary }}
                         >
                             Primaire
                         </button>
                         <button
-                            className="px-4 py-2 rounded font-medium text-white transition-opacity hover:opacity-90 text-sm"
+                            className="px-4 py-2 rounded font-medium text-theme-text-main transition-opacity hover:opacity-90 text-sm"
                             style={{ backgroundColor: colors.secondary }}
                         >
                             Secondaire
                         </button>
                         <button
-                            className="px-4 py-2 rounded font-medium text-white transition-opacity hover:opacity-90 text-sm"
+                            className="px-4 py-2 rounded font-medium text-theme-text-main transition-opacity hover:opacity-90 text-sm"
                             style={{ backgroundColor: colors.accent }}
                         >
                             Accent
                         </button>
                         <button
-                            className="px-4 py-2 rounded font-medium text-white transition-opacity hover:opacity-90 text-sm"
+                            className="px-4 py-2 rounded font-medium text-theme-text-main transition-opacity hover:opacity-90 text-sm"
                             style={{ backgroundColor: colors.success }}
                         >
                             Succès
@@ -199,13 +199,13 @@ export function ThemePreview() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t" style={{ borderColor: colors.border }}>
                         <button
-                            className="px-4 py-2 rounded font-medium text-white transition-opacity hover:opacity-90 text-sm"
+                            className="px-4 py-2 rounded font-medium text-theme-text-main transition-opacity hover:opacity-90 text-sm"
                             style={{ backgroundColor: colors.warning }}
                         >
                             Avertissement
                         </button>
                         <button
-                            className="px-4 py-2 rounded font-medium text-white transition-opacity hover:opacity-90 text-sm"
+                            className="px-4 py-2 rounded font-medium text-theme-text-main transition-opacity hover:opacity-90 text-sm"
                             style={{ backgroundColor: colors.error }}
                         >
                             Erreur
@@ -234,7 +234,7 @@ export function ThemePreview() {
 
             {/* Typographie */}
             <div>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+                <h4 className="text-sm font-semibold text-theme-text-muted mb-3">
                     Typographie
                 </h4>
                 <div
@@ -272,7 +272,7 @@ export function ThemePreview() {
 
             {/* Cartes */}
             <div>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+                <h4 className="text-sm font-semibold text-theme-text-muted mb-3">
                     Cartes et encadrés
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

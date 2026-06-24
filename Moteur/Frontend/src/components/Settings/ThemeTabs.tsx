@@ -18,7 +18,7 @@ export function ThemeTabs({ tabs }: ThemeTabsProps) {
     return (
         <div className="space-y-4">
             {/* Onglets */}
-            <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-700 pb-0">
+            <div className="flex flex-wrap gap-2 border-b border-theme-primary/20 pb-0">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
@@ -26,7 +26,7 @@ export function ThemeTabs({ tabs }: ThemeTabsProps) {
                         className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors text-sm font-medium ${
                             activeTab === tab.id
                                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                                : 'border-transparent text-theme-text-muted hover:text-theme-text-main'
                         }`}
                     >
                         {tab.icon}

@@ -6,7 +6,22 @@ export default {
   ],
   darkMode: 'class',
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        theme: {
+          primary:   'var(--color-primary)',
+          secondary: 'var(--color-secondary)',
+          accent:    'var(--color-accent)',
+          danger:    'var(--color-danger)',
+          'bg-main':    'var(--color-bg-main)',
+          'bg-card':    'var(--color-bg-card)',
+          'bg-sidebar': 'var(--color-bg-sidebar)',
+          border:    'var(--color-border)',
+          'text-main':  'var(--color-text-main)',
+          'text-muted': 'var(--color-text-muted)',
+        }
+      }
+    },
   },
   plugins: [],
 }

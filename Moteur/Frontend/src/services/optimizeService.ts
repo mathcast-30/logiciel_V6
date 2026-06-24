@@ -30,6 +30,7 @@ export interface OptimizationRequest {
     material_source: 'stock' | 'supplier';
     material_sources?: Record<number, 'stock' | 'supplier'>;
     raw_wood_params?: RawWoodParams;
+    colors?: Record<string, string>;
 }
 
 export interface Placement {

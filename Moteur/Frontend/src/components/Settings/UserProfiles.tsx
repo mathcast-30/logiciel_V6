@@ -162,17 +162,17 @@ export function UserProfiles() {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                <h3 className="text-lg font-semibold text-theme-text-muted">
                     Profils Utilisateur
                 </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                <p className="text-sm text-theme-text-muted mt-1">
                     Cr�ez plusieurs profils avec leurs propres param�tres
                 </p>
             </div>
 
             {/* Cr�er nouveau profil */}
-            <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
-                <h4 className="font-medium text-slate-900 dark:text-slate-100 mb-3">
+            <div className="p-4 rounded-lg border border-theme-primary/20 bg-theme-bg-card">
+                <h4 className="font-medium text-theme-text-muted mb-3">
                     Nouveau Profil
                 </h4>
                 <div className="flex gap-2">
@@ -181,18 +181,18 @@ export function UserProfiles() {
                         placeholder="Nom du profil (ex: Bureau, Mobile, Pr�sentation)"
                         value={newProfileName}
                         onChange={(e) => setNewProfileName(e.target.value)}
-                        className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                        className="flex-1 px-3 py-2 rounded-lg border border-theme-primary/20 bg-theme-bg-main text-theme-text-muted"
                         onKeyPress={(e) => e.key === 'Enter' && handleCreateProfile()}
                     />
                     <button
                         onClick={handleCreateProfile}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-theme-text-main hover:bg-blue-600 transition-colors"
                     >
                         <Plus size={18} />
                         Cr�er
                     </button>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                <p className="text-xs text-theme-text-muted mt-2">
                     Le profil sera cr�� avec vos param�tres actuels
                 </p>
             </div>
@@ -202,7 +202,7 @@ export function UserProfiles() {
                 <div className="p-4 rounded-lg border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white">
+                            <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-theme-text-main">
                                 <User size={16} />
                             </div>
                             <div>
@@ -216,7 +216,7 @@ export function UserProfiles() {
                         </div>
                         <button
                             onClick={handleUpdateCurrentProfile}
-                            className="flex items-center gap-2 px-3 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors text-sm"
+                            className="flex items-center gap-2 px-3 py-1 rounded-lg bg-green-600 text-theme-text-main hover:bg-green-700 transition-colors text-sm"
                         >
                             <Save size={14} />
                             Enregistrer
@@ -231,7 +231,7 @@ export function UserProfiles() {
             {/* Liste des profils */}
             {profiles.length > 0 ? (
                 <div className="space-y-3">
-                    <h4 className="font-medium text-slate-700 dark:text-slate-300">
+                    <h4 className="font-medium text-theme-text-muted">
                         Tous les Profils ({profiles.length})
                     </h4>
                     <div className="space-y-2">
@@ -241,7 +241,7 @@ export function UserProfiles() {
                                 className={`p-4 rounded-lg border-2 transition-colors ${
                                     profile.isActive
                                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
+                                        : 'border-theme-primary/20 bg-theme-bg-card hover:border-theme-primary/40'
                                 }`}
                             >
                                 <div className="flex items-center justify-between">
@@ -252,7 +252,7 @@ export function UserProfiles() {
                                                     type="text"
                                                     value={editingName}
                                                     onChange={(e) => setEditingName(e.target.value)}
-                                                    className="flex-1 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                                                    className="flex-1 px-2 py-1 rounded border border-theme-primary/20 bg-theme-bg-main text-theme-text-muted text-sm"
                                                     autoFocus
                                                 />
                                                 <button
@@ -277,10 +277,10 @@ export function UserProfiles() {
                                                     style={{ backgroundColor: profile.colors.primary }}
                                                 />
                                                 <div>
-                                                    <p className="font-medium text-slate-900 dark:text-slate-100">
+                                                    <p className="font-medium text-theme-text-muted">
                                                         {profile.name}
                                                     </p>
-                                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                    <p className="text-xs text-theme-text-muted">
                                                         {profile.theme === 'system'
                                                             ? 'Syst�me'
                                                             : profile.theme === 'dark'
@@ -300,7 +300,7 @@ export function UserProfiles() {
                                         {!profile.isActive && (
                                             <button
                                                 onClick={() => handleSwitchProfile(profile.id)}
-                                                className="px-3 py-1 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors text-sm"
+                                                className="px-3 py-1 rounded-lg bg-blue-500 text-theme-text-main hover:bg-blue-600 transition-colors text-sm"
                                             >
                                                 Activer
                                             </button>
@@ -311,7 +311,7 @@ export function UserProfiles() {
                                                     setEditingId(profile.id);
                                                     setEditingName(profile.name);
                                                 }}
-                                                className="p-1 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+                                                className="p-1 text-theme-text-muted hover:bg-theme-bg-card rounded"
                                             >
                                                 <Edit2 size={16} />
                                             </button>
@@ -331,9 +331,9 @@ export function UserProfiles() {
                     </div>
                 </div>
             ) : (
-                <div className="p-8 text-center rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700">
-                    <User size={32} className="mx-auto text-slate-400 mb-3" />
-                    <p className="text-slate-600 dark:text-slate-400">
+                <div className="p-8 text-center rounded-lg border-2 border-dashed border-theme-primary/20">
+                    <User size={32} className="mx-auto text-theme-text-muted mb-3" />
+                    <p className="text-theme-text-muted">
                         Aucun profil cr��. Cr�ez votre premier profil !
                     </p>
                 </div>

@@ -1,158 +1,124 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { THEME_COLORS, DEFAULT_THEME_DARK, DEFAULT_THEME_LIGHT } from '../config/themeConfig';
 
-export type Theme = 'dark' | 'light' | 'system';
+const LS_MODE_KEY    = 'opticut_theme_mode';
+const LS_COLORS_KEY  = 'opticut_theme_colors';
 
-export interface ColorPalette {
-    primary: string;
-    secondary: string;
-    accent: string;
-    background: string;
-    surface: string;
-    text: string;
-    border: string;
-    success: string;
-    warning: string;
-    error: string;
+type ColorMap = Record<string, string>;
+export type ThemeMode = 'dark' | 'light' | 'system';
+
+interface ThemeContextType {
+  mode: ThemeMode;
+  theme: ThemeMode; // Alias pour compatibilité avec l'existant
+  setMode: (m: ThemeMode) => void;
+  setTheme: (m: ThemeMode) => void; // Alias pour compatibilité
+  colors: ColorMap;
+  setColor: (key: string, hex: string) => void;
+  setColors: (map: ColorMap) => void;
+  resetColors: () => void;
+  exportTheme: () => string;
+  importTheme: (json: string) => boolean;
 }
 
-export const DEFAULT_LIGHT_PALETTE: ColorPalette = {
-    primary: '#3b82f6',
-    secondary: '#8b5cf6',
-    accent: '#ec4899',
-    background: '#f8fafc',
-    surface: '#ffffff',
-    text: '#1e293b',
-    border: '#e2e8f0',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
-};
+const ThemeContext = createContext<ThemeContextType | null>(null);
 
-export const DEFAULT_DARK_PALETTE: ColorPalette = {
-    primary: '#60a5fa',
-    secondary: '#a78bfa',
-    accent: '#f472b6',
-    background: '#0f172a',
-    surface: '#1e293b',
-    text: '#f1f5f9',
-    border: '#334155',
-    success: '#34d399',
-    warning: '#fbbf24',
-    error: '#f87171',
-};
-
-interface ThemeProviderProps {
-    children: React.ReactNode;
-    defaultTheme?: Theme;
-    storageKey?: string;
+// ─── Applique un ColorMap comme variables CSS sur :root ───────
+function applyColorsToDom(colors: ColorMap) {
+  const root = document.documentElement;
+  THEME_COLORS.forEach(({ key, cssVar }) => {
+    if (colors[key]) root.style.setProperty(cssVar, colors[key]);
+  });
 }
 
-interface ThemeProviderState {
-    theme: Theme;
-    setTheme: (theme: Theme) => void;
-    colors: ColorPalette;
-    setColors: (colors: ColorPalette) => void;
-    resetColors: () => void;
-}
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  // ── 1. Mode (dark / light / system) ──
+  const [mode, setModeState] = useState<ThemeMode>(() => {
+    return (localStorage.getItem(LS_MODE_KEY) as ThemeMode) ?? 'dark';
+  });
 
-const initialState: ThemeProviderState = {
-    theme: 'system',
-    setTheme: () => null,
-    colors: DEFAULT_LIGHT_PALETTE,
-    setColors: () => null,
-    resetColors: () => null,
-};
+  // ── 2. Couleurs personnalisées ──
+  const [colors, setColorsState] = useState<ColorMap>(() => {
+    try {
+      const saved = localStorage.getItem(LS_COLORS_KEY);
+      return saved ? JSON.parse(saved) : DEFAULT_THEME_DARK;
+    } catch { return DEFAULT_THEME_DARK; }
+  });
 
-const ThemeContext = createContext<ThemeProviderState>(initialState);
+  // ── 3. Calcule si on est effectivement en mode sombre ──
+  const isDark = mode === 'dark' || (mode === 'system' &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-const COLORS_STORAGE_KEY = 'opticut-ui-colors';
+  // ── 4. Applique le mode sombre sur <html> (Tailwind dark:) ──
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDark);
+    if (!isDark) {
+      document.documentElement.classList.add('light-mode');
+    } else {
+      document.documentElement.classList.remove('light-mode');
+    }
+  }, [isDark]);
 
-const applyColorsToDOM = (colors: ColorPalette) => {
-    const root = document.documentElement;
-    Object.entries(colors).forEach(([key, value]) => {
-        root.style.setProperty(`--color-${key}`, value);
+  // ── 5. Applique les variables CSS dès le montage ET à chaque changement ──
+  useEffect(() => {
+    applyColorsToDom(colors);
+  }, [colors]);
+
+  const setMode = useCallback((m: ThemeMode) => {
+    setModeState(m);
+    localStorage.setItem(LS_MODE_KEY, m);
+  }, []);
+
+  const setColor = useCallback((key: string, hex: string) => {
+    setColorsState(prev => {
+      const next = { ...prev, [key]: hex };
+      localStorage.setItem(LS_COLORS_KEY, JSON.stringify(next));
+      return next;
     });
-};
+  }, []);
 
-export function ThemeProvider({
-    children,
-    defaultTheme = 'system',
-    storageKey = 'vite-ui-theme',
-}: ThemeProviderProps) {
-    const [theme, setThemeState] = useState<Theme>(
-        () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-    );
-    
-    const [colors, setColorsState] = useState<ColorPalette>(() => {
-        const stored = localStorage.getItem(COLORS_STORAGE_KEY);
-        if (stored) {
-            try {
-                return JSON.parse(stored);
-            } catch {
-                return DEFAULT_LIGHT_PALETTE;
-            }
-        }
-        return DEFAULT_LIGHT_PALETTE;
-    });
+  const setColors = useCallback((map: ColorMap) => {
+    setColorsState(map);
+    localStorage.setItem(LS_COLORS_KEY, JSON.stringify(map));
+  }, []);
 
-    useEffect(() => {
-        applyColorsToDOM(colors);
-    }, [colors]);
+  const resetColors = useCallback(() => {
+    const defaults = isDark ? DEFAULT_THEME_DARK : DEFAULT_THEME_LIGHT;
+    setColors(defaults);
+  }, [isDark, setColors]);
 
-    useEffect(() => {
-        const root = window.document.documentElement;
-        root.classList.remove('light', 'dark');
+  const exportTheme = useCallback(() => {
+    return JSON.stringify({ mode, colors }, null, 2);
+  }, [mode, colors]);
 
-        if (theme === 'system') {
-            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
-                .matches
-                ? 'dark'
-                : 'light';
+  const importTheme = useCallback((json: string): boolean => {
+    try {
+      const parsed = JSON.parse(json);
+      if (parsed.colors) setColors(parsed.colors);
+      if (parsed.mode)   setMode(parsed.mode);
+      return true;
+    } catch { return false; }
+  }, [setColors, setMode]);
 
-            root.classList.add(systemTheme);
-            return;
-        }
-
-        root.classList.add(theme);
-    }, [theme]);
-
-    const setTheme = (newTheme: Theme) => {
-        localStorage.setItem(storageKey, newTheme);
-        setThemeState(newTheme);
-    };
-
-    const setColors = (newColors: ColorPalette) => {
-        localStorage.setItem(COLORS_STORAGE_KEY, JSON.stringify(newColors));
-        setColorsState(newColors);
-    };
-
-    const resetColors = () => {
-        const currentIsDark = document.documentElement.classList.contains('dark');
-        const defaultPalette = currentIsDark ? DEFAULT_DARK_PALETTE : DEFAULT_LIGHT_PALETTE;
-        setColors(defaultPalette);
-    };
-
-    const value = {
-        theme,
-        setTheme,
-        colors,
-        setColors,
-        resetColors,
-    };
-
-    return (
-        <ThemeContext.Provider value={value}>
-            {children}
-        </ThemeContext.Provider>
-    );
+  return (
+    <ThemeContext.Provider value={{ 
+        mode, 
+        theme: mode, 
+        setMode, 
+        setTheme: setMode, 
+        colors, 
+        setColor, 
+        setColors, 
+        resetColors, 
+        exportTheme, 
+        importTheme 
+    }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
-export const useTheme = () => {
-    const context = useContext(ThemeContext);
-
-    if (context === undefined)
-        throw new Error('useTheme must be used within a ThemeProvider');
-
-    return context;
-};
+export function useTheme() {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error('useTheme must be used inside ThemeProvider');
+  return ctx;
+}

@@ -36,7 +36,7 @@ export function Sidebar() {
     const { theme, setTheme } = useTheme();
 
     return (
-        <aside className="w-72 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white shadow-xl z-20 flex-shrink-0 flex flex-col h-full">
+        <aside className="w-72 bg-theme-bg-sidebar text-theme-text-main border-r border-theme-border shadow-xl z-20 flex-shrink-0 flex flex-col h-full">
             {/* Logo & Brand */}
             <div className="p-6 border-b border-white/10 flex items-center gap-3">
                 <div className="relative flex-shrink-0">

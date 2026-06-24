@@ -76,10 +76,10 @@ export function PresetSelector() {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                <h3 className="text-lg font-semibold text-theme-text-muted mb-2">
                     Présets de Couleurs
                 </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
+                <p className="text-sm text-theme-text-muted">
                     Choisissez parmi nos présets ou créez les vôtres
                 </p>
             </div>
@@ -115,22 +115,22 @@ export function PresetSelector() {
 
             {/* Présets intégrés */}
             <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <h4 className="text-sm font-semibold text-theme-text-muted">
                     Présets Intégrés
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {BUILT_IN_PRESETS.map((preset) => (
                         <div
                             key={preset.id}
-                            className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-colors cursor-pointer"
+                            className="p-4 rounded-lg border border-theme-primary/20 bg-theme-bg-card hover:border-theme-primary/40 transition-colors cursor-pointer"
                             onClick={() => handleApplyPreset(preset.light)}
                         >
                             <div className="flex items-start justify-between mb-3">
                                 <div>
-                                    <h5 className="font-medium text-slate-900 dark:text-slate-100">
+                                    <h5 className="font-medium text-theme-text-muted">
                                         {preset.name}
                                     </h5>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    <p className="text-xs text-theme-text-muted mt-1">
                                         {preset.description}
                                     </p>
                                 </div>
@@ -141,7 +141,7 @@ export function PresetSelector() {
                                 {[preset.light.primary, preset.light.secondary, preset.light.accent, preset.light.success, preset.light.error].map((color, idx) => (
                                     <div
                                         key={idx}
-                                        className="flex-1 h-6 rounded-md border border-slate-300 dark:border-slate-600"
+                                        className="flex-1 h-6 rounded-md border border-theme-primary/20"
                                         style={{ backgroundColor: color }}
                                         title={color}
                                     />
@@ -154,7 +154,7 @@ export function PresetSelector() {
                                     {preset.tags.map((tag, idx) => (
                                         <span
                                             key={idx}
-                                            className="text-xs px-2 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                                            className="text-xs px-2 py-1 rounded-full bg-theme-bg-card hover:bg-theme-bg-main bg-theme-bg-card text-theme-text-muted"
                                         >
                                             {tag}
                                         </span>
@@ -163,7 +163,7 @@ export function PresetSelector() {
                             )}
 
                             <button
-                                className="w-full mt-3 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors text-sm font-medium"
+                                className="w-full mt-3 py-2 rounded-lg bg-blue-500 text-theme-text-main hover:bg-blue-600 transition-colors text-sm font-medium"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     handleApplyPreset(preset.light);
@@ -179,11 +179,11 @@ export function PresetSelector() {
             {/* Mes Presets */}
             {showCustomPresets && (
                 <div className="space-y-3 p-4 rounded-lg border-2 border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20">
-                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    <h4 className="text-sm font-semibold text-theme-text-muted">
                         Mes Presets Personnalisés
                     </h4>
                     {customPresets.length === 0 ? (
-                        <p className="text-sm text-slate-600 dark:text-slate-400 text-center py-8">
+                        <p className="text-sm text-theme-text-muted text-center py-8">
                             Aucun preset personnalisé. Créez-en un !
                         </p>
                     ) : (
@@ -191,14 +191,14 @@ export function PresetSelector() {
                             {customPresets.map((preset: any) => (
                                 <div
                                     key={preset.id}
-                                    className="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                                    className="p-3 rounded-lg bg-theme-bg-main border border-theme-primary/20"
                                 >
                                     <div className="flex items-start justify-between mb-2">
                                         <div>
-                                            <h5 className="font-medium text-slate-900 dark:text-slate-100 text-sm">
+                                            <h5 className="font-medium text-theme-text-muted text-sm">
                                                 {preset.name}
                                             </h5>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                            <p className="text-xs text-theme-text-muted">
                                                 {new Date(preset.createdAt).toLocaleDateString('fr-FR')}
                                             </p>
                                         </div>
@@ -214,7 +214,7 @@ export function PresetSelector() {
                                         {[preset.colors.primary, preset.colors.secondary, preset.colors.accent].map((color, idx) => (
                                             <div
                                                 key={idx}
-                                                className="flex-1 h-4 rounded border border-slate-300 dark:border-slate-600"
+                                                className="flex-1 h-4 rounded border border-theme-primary/20"
                                                 style={{ backgroundColor: color }}
                                             />
                                         ))}
@@ -223,13 +223,13 @@ export function PresetSelector() {
                                     <div className="flex gap-2 text-xs">
                                         <button
                                             onClick={() => handleApplyPreset(preset.colors)}
-                                            className="flex-1 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                                            className="flex-1 py-1 rounded bg-blue-500 text-theme-text-main hover:bg-blue-600 transition-colors"
                                         >
                                             Appliquer
                                         </button>
                                         <button
                                             onClick={() => handleExportPreset(preset)}
-                                            className="flex-1 py-1 rounded bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center justify-center gap-1"
+                                            className="flex-1 py-1 rounded bg-green-500 text-theme-text-main hover:bg-green-600 transition-colors flex items-center justify-center gap-1"
                                         >
                                             <Download size={12} /> Export
                                         </button>
