@@ -4,9 +4,12 @@ from pathlib import Path
 
 # On ignore les erreurs d'import pour l'IDE, mais on garde les imports réels
 from fastapi import APIRouter, HTTPException, UploadFile, File, BackgroundTasks, Depends # type: ignore
-from fastapi.responses import FileResponse # type: ignore
+from fastapi.responses import FileResponse, JSONResponse # type: ignore
+import asyncio
+import traceback
 
 from IA_Engine.backup import BackupManager, get_backup_manager
+from ..monitoring_client import log_error
 
 # Note: Le préfixe est géré par main.py (/api/backups)
 router = APIRouter(
@@ -16,17 +19,23 @@ router = APIRouter(
 
 @router.post("")
 async def create_backup(background_tasks: BackgroundTasks, manager=Depends(get_backup_manager)): # type: ignore
-    """Déclenche une sauvegarde manuelle en arrière-plan"""
+    """Déclenche une sauvegarde manuelle"""
     try:
-        # Note: bg tasks ne sont pas utilisées car create_backup est sync rapide
-        filename = manager.create_backup(is_auto=False, notes="Sauvegarde manuelle via API")
+        loop = asyncio.get_event_loop()
+        # On utilise run_in_executor pour ne pas bloquer FastAPI avec la copie SQLite/ZIP
+        filename = await loop.run_in_executor(None, manager.create_backup, False, "Sauvegarde manuelle via API")
         return {
             "filename": filename,
             "status": "success", 
             "message": "Sauvegarde créée avec succès"
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) # type: ignore
+        error_details = traceback.format_exc()
+        log_error("API", "POST /api/backups", f"Erreur lors de la sauvegarde manuelle: {str(e)}\n{error_details}", e)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Erreur interne lors de la sauvegarde: {str(e)}"}
+        )
 
 @router.get("")
 async def list_backups(manager=Depends(get_backup_manager)): # type: ignore

@@ -3,12 +3,25 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.db.database import get_db
-from app.models import Project as ProjectModel, OptimizationResult, Stock as StockModel, Part as PartModel
+from app.models import Project as ProjectModel, OptimizationResult, Stock as StockModel, Part as PartModel, Material
+from sqlalchemy import text
 import json
 from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
+
+def _get_source_cout(project_id: int, db: Session) -> str:
+    """Retourne la source du coût matière pour un projet donné."""
+    opt = db.query(OptimizationResult).filter(
+        OptimizationResult.project_id == project_id
+    ).order_by(OptimizationResult.id.desc()).first()
+    if opt and opt.total_cost is not None and opt.total_cost > 0:
+        return "optimization"
+    parts = db.query(PartModel).filter(PartModel.project_id == project_id).count()
+    if parts > 0:
+        return "parts"
+    return "none"
 
 router = APIRouter()
 
@@ -102,39 +115,163 @@ def get_management_planning(db: Session = Depends(get_db)):
             "estimated_cost": getattr(p, "estimated_cost", 0.0),
             "actual_cost": getattr(p, "actual_cost", 0.0),
             "estimated_hours": getattr(p, "estimated_hours", 0.0),
-            "actual_hours": getattr(p, "actual_hours", 0.0)
+            "actual_hours": getattr(p, "actual_hours", 0.0),
+            "marge_pct": getattr(p, "marge_pct", None),
+            "prix_vente_manuel": getattr(p, "prix_vente_manuel", None),
+            "source_cout_matieres": _get_source_cout(p.id, db),
         })
+
     
     return {"projects": results}
 
 @router.get("/analytics")
 def get_management_analytics(db: Session = Depends(get_db)):
-    # Mocks based on the user request, as real data requires complex aggregations
-    return {
-        "k_metric_weekly": [
-            {"week": "S15", "value": 81},
-            {"week": "S16", "value": 83},
-            {"week": "S17", "value": 85},
-            {"week": "S18", "value": 82},
-            {"week": "S19", "value": 88},
-            {"week": "S20", "value": 87},
-            {"week": "S21", "value": 89},
-            {"week": "S22", "value": 86}
-        ],
-        "budget_comparison": [
-            {"category": "Matière", "estimated": 500, "actual": 480},
-            {"category": "Main d'oeuvre", "estimated": 300, "actual": 450},
-            {"category": "Fournitures", "estimated": 100, "actual": 110},
-            {"category": "Sous-traitance", "estimated": 200, "actual": 200}
-        ],
-        "material_distribution": [
-            {"material": "Chêne 18mm", "area_m2": 12.4, "percentage": 35},
-            {"material": "MDF 19mm", "area_m2": 8.0, "percentage": 25},
-            {"material": "Contreplaqué", "area_m2": 5.0, "percentage": 20},
-            {"material": "Hêtre Massif", "area_m2": 3.5, "percentage": 20}
-        ],
-        "profitability": {
-            "prevue": {"debourse_sec": 515, "frais_generaux": 51, "benefice": 160, "margin_pct": 41.07},
-            "reelle": {"debourse_sec": 1125, "frais_generaux": 112, "benefice": 489, "margin_pct": 53.47}
+    try:
+        tarification = db.execute(text("SELECT taux_horaire, marge_defaut_pct, frais_generaux_pct FROM tarification_globale WHERE id = 1")).fetchone()
+        taux_horaire = tarification[0] if tarification and tarification[0] is not None else 35.0
+        frais_gen_pct = tarification[2] if tarification and tarification[2] is not None else 10.0
+        
+        projects = db.query(ProjectModel).all()
+        
+        total_mo_prevue = 0.0
+        total_mo_reelle = 0.0
+        total_mat_prevue = 0.0
+        total_mat_reelle = 0.0
+        
+        total_benefice_prevu = 0.0
+        total_benefice_reel = 0.0
+        
+        mat_dist = {}
+        count_optimization = 0
+        count_parts = 0
+        count_none = 0
+        
+        for p in projects:
+            mo_prevue = float(p.estimated_hours or 0.0) * taux_horaire
+            mo_reelle = float(p.actual_hours or 0.0) * taux_horaire
+            total_mo_prevue += mo_prevue
+            total_mo_reelle += mo_reelle
+            
+            opt = db.query(OptimizationResult).filter(OptimizationResult.project_id == p.id).order_by(OptimizationResult.id.desc()).first()
+            mat_cost_for_project = 0.0
+            
+            if opt and opt.total_cost is not None and opt.total_cost > 0:
+                mat_cost_for_project = opt.total_cost
+                count_optimization += 1
+                # For mat_dist, still rely on parts surface
+                parts = db.query(PartModel).filter(PartModel.project_id == p.id).all()
+                for part in parts:
+                    if part.material_id:
+                        material = db.query(Material).filter(Material.id == part.material_id).first()
+                        if material:
+                            area_m2 = (part.width * part.height * part.quantity) / 1_000_000
+                            if material.name not in mat_dist:
+                                mat_dist[material.name] = 0.0
+                            mat_dist[material.name] += area_m2
+            else:
+                parts = db.query(PartModel).filter(PartModel.project_id == p.id).all()
+                if len(parts) > 0:
+                    count_parts += 1
+                else:
+                    count_none += 1
+                for part in parts:
+                    if part.material_id:
+                        material = db.query(Material).filter(Material.id == part.material_id).first()
+                        if material:
+                            area_m2 = (part.width * part.height * part.quantity) / 1_000_000
+                            cost = area_m2 * (material.cost_per_sqm or 0.0)
+                            mat_cost_for_project += cost
+                            
+                            if material.name not in mat_dist:
+                                mat_dist[material.name] = 0.0
+                            mat_dist[material.name] += area_m2
+                            
+            total_mat_prevue += mat_cost_for_project
+            total_mat_reelle += mat_cost_for_project 
+            
+            ds_prevu = mo_prevue + mat_cost_for_project
+            ds_reel = mo_reelle + mat_cost_for_project
+            
+            fg_prevu = ds_prevu * (frais_gen_pct / 100.0)
+            fg_reel = ds_reel * (frais_gen_pct / 100.0)
+            
+            cout_de_revient_prevu = ds_prevu + fg_prevu
+            cout_de_revient_reel = ds_reel + fg_reel
+            
+            if p.prix_vente_manuel and p.prix_vente_manuel > 0:
+                prix_vente = p.prix_vente_manuel
+            else:
+                marge = p.marge_pct if p.marge_pct is not None else (tarification[1] if tarification and tarification[1] is not None else 30.0)
+                prix_vente = cout_de_revient_prevu / (1 - (marge / 100.0)) if marge < 100 else cout_de_revient_prevu
+                
+            benefice_prevu = prix_vente - cout_de_revient_prevu
+            benefice_reel = prix_vente - cout_de_revient_reel
+            
+            total_benefice_prevu += benefice_prevu
+            total_benefice_reel += benefice_reel
+            
+        total_ds_prevu = total_mo_prevue + total_mat_prevue
+        total_ds_reel = total_mo_reelle + total_mat_reelle
+        
+        total_fg_prevu = total_ds_prevu * (frais_gen_pct / 100.0)
+        total_fg_reel = total_ds_reel * (frais_gen_pct / 100.0)
+        
+        total_cr_prevu = total_ds_prevu + total_fg_prevu
+        total_cr_reel = total_ds_reel + total_fg_reel
+        
+        total_area = sum(mat_dist.values())
+        material_distribution = []
+        for name, area in mat_dist.items():
+            pct = (area / total_area * 100) if total_area > 0 else 0
+            material_distribution.append({
+                "material": name,
+                "area_m2": round(area, 2),
+                "percentage": round(pct, 1)
+            })
+        
+        material_distribution.sort(key=lambda x: x["area_m2"], reverse=True)
+        
+        margin_pct_prevue = (total_benefice_prevu / (total_cr_prevu + total_benefice_prevu) * 100) if (total_cr_prevu + total_benefice_prevu) > 0 else 0
+        margin_pct_reelle = (total_benefice_reel / (total_cr_reel + total_benefice_reel) * 100) if (total_cr_reel + total_benefice_reel) > 0 else 0
+        
+        return {
+            "k_metric_weekly": [
+                {"week": "S15", "value": 81},
+                {"week": "S16", "value": 83},
+                {"week": "S17", "value": 85},
+                {"week": "S18", "value": 82},
+                {"week": "S19", "value": 88},
+                {"week": "S20", "value": 87},
+                {"week": "S21", "value": 89},
+                {"week": "S22", "value": 86}
+            ],
+            "budget_comparison": [
+                {"category": "Matière", "estimated": round(total_mat_prevue, 2), "actual": round(total_mat_reelle, 2)},
+                {"category": "Main d'oeuvre", "estimated": round(total_mo_prevue, 2), "actual": round(total_mo_reelle, 2)},
+                {"category": "Fournitures", "estimated": 0, "actual": 0},
+                {"category": "Sous-traitance", "estimated": 0, "actual": 0}
+            ],
+            "material_distribution": material_distribution,
+            "profitability": {
+                "prevue": {
+                    "debourse_sec": round(total_ds_prevu, 2), 
+                    "frais_generaux": round(total_fg_prevu, 2), 
+                    "benefice": round(total_benefice_prevu, 2), 
+                    "margin_pct": round(margin_pct_prevue, 2)
+                },
+                "reelle": {
+                    "debourse_sec": round(total_ds_reel, 2), 
+                    "frais_generaux": round(total_fg_reel, 2), 
+                    "benefice": round(total_benefice_reel, 2), 
+                    "margin_pct": round(margin_pct_reelle, 2)
+                }
+            },
+            "analytics_quality": (
+                "real" if count_parts == 0 and count_none == 0
+                else "estimative" if count_optimization == 0
+                else "partial"
+            )
         }
-    }
+    except Exception as e:
+        logger.error(f"Error in analytics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

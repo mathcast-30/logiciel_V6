@@ -1,142 +1,75 @@
 import * as React from 'react';
 const { useState, useEffect } = React;
 
-// Icon components with proper TypeScript typing
-interface IconProps {
-    size?: number;
-    className?: string;
-}
+// Import Settings Components
+import { ThemeCustomizationPanel } from '../components/Settings/ThemeCustomizationPanel';
+import { UserProfiles } from '../components/Settings/UserProfiles';
+import { NavigationAdminPanel } from '../components/Settings/NavigationAdminPanel';
+import { NavigationUserPanel } from '../components/Settings/NavigationUserPanel';
+import { AboutPanel } from '../components/Settings/AboutPanel';
+import { UsersAdminPanel } from '../components/Settings/UsersAdminPanel';
+import { SettingsTabs, TabConfig } from '../components/Settings/SettingsTabs';
+import { BackupService, type BackupInfo } from '../services/backupService';
+import { TarificationPanel } from '../components/Settings/TarificationPanel';
+import { Euro } from 'lucide-react';
 
+// Icons
+interface IconProps { size?: number; className?: string; }
 const Settings: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m3.08 3.08l4.24 4.24M1 12h6m6 0h6m-1.78-7.78l-4.24 4.24m-3.08 3.08l-4.24 4.24" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><circle cx="12" cy="12" r="3" /><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m3.08 3.08l4.24 4.24M1 12h6m6 0h6m-1.78-7.78l-4.24 4.24m-3.08 3.08l-4.24 4.24" /></svg>
 );
-
 const Save: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-        <polyline points="17 21 17 13 7 13 7 21" />
-        <polyline points="7 3 7 8 15 8" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>
 );
-
 const Sliders: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <line x1="4" y1="21" x2="4" y2="14" />
-        <line x1="4" y1="10" x2="4" y2="3" />
-        <line x1="12" y1="21" x2="12" y2="12" />
-        <line x1="12" y1="8" x2="12" y2="3" />
-        <line x1="20" y1="21" x2="20" y2="16" />
-        <line x1="20" y1="12" x2="20" y2="3" />
-        <line x1="1" y1="14" x2="7" y2="14" />
-        <line x1="9" y1="8" x2="15" y2="8" />
-        <line x1="17" y1="16" x2="23" y2="16" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" /></svg>
 );
-
 const Printer: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <polyline points="6 9 6 2 18 2 18 9" />
-        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-        <rect x="6" y="14" width="12" height="8" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>
 );
-
 const FolderOutput: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-        <polyline points="12 11 12 17 9 14 15 14" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M22 19a2 2 0 0 1-2-2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /><polyline points="12 11 12 17 9 14 15 14" /></svg>
 );
-
 const Database: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <ellipse cx="12" cy="5" rx="9" ry="3" />
-        <path d="M3 5c0 1.657 4.03 3 9 3s9-1.343 9-3" />
-        <path d="M3 5v8c0 1.657 4.03 3 9 3s9-1.343 9-3V5" />
-        <path d="M3 13c0 1.657 4.03 3 9 3s9-1.343 9-3" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M3 5c0 1.657 4.03 3 9 3s9-1.343 9-3" /><path d="M3 5v8c0 1.657 4.03 3 9 3s9-1.343 9-3V5" /><path d="M3 13c0 1.657 4.03 3 9 3s9-1.343 9-3" /></svg>
 );
-
 const Check: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <polyline points="20 6 9 17 4 12" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><polyline points="20 6 9 17 4 12" /></svg>
 );
-
 const AlertCircle: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="8" x2="12" y2="12" />
-        <line x1="12" y1="16" x2="12.01" y2="16" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
 );
-
 const History: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12 6 12 12 16 14" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
 );
-
 const Download: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-        <polyline points="7 10 12 15 17 10" />
-        <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
 );
-
 const Upload: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-        <polyline points="17 8 12 3 7 8" />
-        <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
 );
-
 const RefreshCcw: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <polyline points="1 4 1 10 7 10" />
-        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
 );
-
 const Palette: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <circle cx="13.5" cy="6.5" r="1.5" />
-        <circle cx="17.5" cy="10.5" r="1.5" />
-        <circle cx="17.5" cy="14.5" r="1.5" />
-        <circle cx="13.5" cy="18.5" r="1.5" />
-        <circle cx="6.5" cy="18.5" r="1.5" />
-        <circle cx="6.5" cy="14.5" r="1.5" />
-        <circle cx="6.5" cy="10.5" r="1.5" />
-        <circle cx="6.5" cy="6.5" r="1.5" />
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="none" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><circle cx="13.5" cy="6.5" r="1.5" /><circle cx="17.5" cy="10.5" r="1.5" /><circle cx="17.5" cy="14.5" r="1.5" /><circle cx="13.5" cy="18.5" r="1.5" /><circle cx="6.5" cy="18.5" r="1.5" /><circle cx="6.5" cy="14.5" r="1.5" /><circle cx="6.5" cy="10.5" r="1.5" /><circle cx="6.5" cy="6.5" r="1.5" /><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="none" /></svg>
 );
-
 const Users: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
 );
 const Trash: React.FC<IconProps> = ({ size = 24, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-        <polyline points="3 6 5 6 21 6" />
-        <path d="M19 6v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2-2H8a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+);
+const Compass: React.FC<IconProps> = ({ size = 24, className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+);
+const Lock: React.FC<IconProps> = ({ size = 24, className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+);
+const Info: React.FC<IconProps> = ({ size = 24, className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
 );
 
-import { BackupService, type BackupInfo } from '../services/backupService';
-import { ThemeSelector } from '../components/Settings/ThemeSelector';
-import { UserProfiles } from '../components/Settings/UserProfiles';
-import { ThemeCustomizationPanel } from '../components/Settings/ThemeCustomizationPanel';
 
 export function SettingsPage() {
     const [settings, setSettings] = useState({
@@ -197,13 +130,12 @@ export function SettingsPage() {
         setIsDeleting(filename);
         try {
             await BackupService.delete(filename);
-            // Suppression optimiste de la liste
             setBackups(prev => prev.filter(b => b.filename !== filename));
             alert("✅ Sauvegarde supprimée.");
         } catch (error) {
             console.error(error);
             alert("❌ Erreur lors de la suppression.");
-            await loadBackups(); // Recharger en cas d'erreur
+            await loadBackups();
         } finally {
             setIsDeleting(null);
         }
@@ -240,7 +172,6 @@ export function SettingsPage() {
     };
 
     const handleSave = () => {
-        // In a real app, this would save to localStorage or API
         localStorage.setItem('opticut_settings', JSON.stringify(settings));
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
@@ -254,17 +185,9 @@ export function SettingsPage() {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
-    return (
+    const renderGeneralTabContent = () => (
         <div className="space-y-6 max-w-4xl">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="page-title flex items-center gap-3">
-                        <Settings className="h-8 w-8 text-theme-text-muted" />
-                        Paramètres
-                    </h1>
-                    <p className="text-theme-text-muted mt-1">Configurez les valeurs par défaut de l'application</p>
-                </div>
+            <div className="flex justify-end mb-4">
                 <button
                     onClick={handleSave}
                     className="btn-primary flex items-center gap-2"
@@ -282,54 +205,10 @@ export function SettingsPage() {
                     )}
                 </button>
             </div>
-
             {saved && (
-                <div className="alert-success flex items-center gap-3 animate-fade-in-down">
+                <div className="alert-success flex items-center gap-3 animate-fade-in-down mb-6">
                     <Check className="h-5 w-5" />
                     Paramètres sauvegardés avec succès
-                </div>
-            )}
-
-            {/* Apparence - Thème */}
-            <div className="card border-l-4 border-l-blue-500 dark:border-l-blue-500">
-                <div className="card-header flex items-center gap-2">
-                    <Settings className="h-5 w-5 text-theme-primary" />
-                    <h2 className="font-semibold text-theme-text-main">Apparence</h2>
-                </div>
-                <div className="card-body">
-                    <ThemeSelector />
-                </div>
-            </div>
-
-            {/* Espace de personnalisation du thème */}
-            <div className="card">
-                <div className="card-header flex items-center gap-2">
-                    <Palette className="h-5 w-5 text-theme-secondary" />
-                    <h2 className="font-semibold text-theme-text-main">Personnalisation du Thème</h2>
-                </div>
-                <div className="card-body">
-                    <ThemeCustomizationPanel />
-                </div>
-            </div>
-
-            {/* Profils Utilisateur */}
-            <div className="card border-l-4 border-l-purple-500 dark:border-l-purple-500">
-                <div className="card-header flex items-center gap-2">
-                    <Users className="h-5 w-5 text-theme-accent" />
-                    <h2 className="font-semibold text-theme-text-main">Profils Utilisateur</h2>
-                </div>
-                <div className="card-body">
-                    <UserProfiles />
-                </div>
-            </div>
-
-            {isRestoring && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-                    <div className="bg-theme-bg-card p-6 rounded-xl shadow-xl flex flex-col items-center border border-theme-primary/20">
-                        <RefreshCcw className="h-10 w-10 text-theme-primary animate-spin mb-4" />
-                        <h3 className="text-xl font-bold text-theme-text-main">Restauration en cours...</h3>
-                        <p className="text-theme-text-muted">Ne fermez pas cette page.</p>
-                    </div>
                 </div>
             )}
 
@@ -403,16 +282,12 @@ export function SettingsPage() {
                                             <a
                                                 href={BackupService.downloadUrl(backup.filename)}
                                                 className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                                                title="Télécharger la sauvegarde"
-                                                aria-label="Télécharger la sauvegarde"
                                             >
                                                 <Download className="h-4 w-4" />
                                             </a>
                                             <button
                                                 onClick={() => handleRestore(backup.filename)}
                                                 className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded transition-colors"
-                                                title="Restaurer cette sauvegarde"
-                                                aria-label="Restaurer cette sauvegarde"
                                             >
                                                 <History className="h-4 w-4" />
                                             </button>
@@ -420,8 +295,6 @@ export function SettingsPage() {
                                                 onClick={() => handleDeleteBackup(backup.filename)}
                                                 disabled={isDeleting === backup.filename}
                                                 className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                                title="Supprimer définitivement"
-                                                aria-label="Supprimer définitivement"
                                             >
                                                 {isDeleting === backup.filename ? (
                                                     <RefreshCcw className="h-4 w-4 animate-spin" />
@@ -462,13 +335,10 @@ export function SettingsPage() {
                                 type="number"
                                 min="0"
                                 step="0.5"
-                                title="Épaisseur de lame en mm"
-                                placeholder="3.0"
                                 className="input-field"
                                 value={settings.defaultKerf}
                                 onChange={e => setSettings({ ...settings, defaultKerf: parseFloat(e.target.value) })}
                             />
-                            <p className="text-xs text-theme-text-muted mt-1">Kerf - largeur de trait de coupe</p>
                         </div>
                         <div>
                             <label htmlFor="trim-margin" className="block text-sm font-medium text-theme-text-main mb-2">
@@ -479,13 +349,10 @@ export function SettingsPage() {
                                 type="number"
                                 min="0"
                                 step="0.5"
-                                title="Marge de ponçage en mm"
-                                placeholder="0.0"
                                 className="input-field"
                                 value={settings.defaultTrimMargin}
                                 onChange={e => setSettings({ ...settings, defaultTrimMargin: parseFloat(e.target.value) })}
                             />
-                            <p className="text-xs text-theme-text-muted mt-1">Ajouté à chaque côté de la pièce</p>
                         </div>
                         <div>
                             <label htmlFor="safety-margin" className="block text-sm font-medium text-theme-text-main mb-2">
@@ -496,13 +363,10 @@ export function SettingsPage() {
                                 type="number"
                                 min="0"
                                 step="1"
-                                title="Marge de sécurité du panneau en mm"
-                                placeholder="10"
                                 className="input-field"
                                 value={settings.defaultSafetyMargin}
                                 onChange={e => setSettings({ ...settings, defaultSafetyMargin: parseFloat(e.target.value) })}
                             />
-                            <p className="text-xs text-theme-text-muted mt-1">Distance minimale des bords du panneau</p>
                         </div>
                         <div>
                             <label htmlFor="min-offcut" className="block text-sm font-medium text-theme-text-main mb-2">
@@ -513,13 +377,10 @@ export function SettingsPage() {
                                 type="number"
                                 min="50"
                                 step="10"
-                                title="Taille minimale des chutes en mm"
-                                placeholder="100"
                                 className="input-field"
                                 value={settings.minOffcutSize}
                                 onChange={e => setSettings({ ...settings, minOffcutSize: parseInt(e.target.value) })}
                             />
-                            <p className="text-xs text-theme-text-muted mt-1">Les chutes plus petites sont ignorées</p>
                         </div>
                     </div>
                 </div>
@@ -540,8 +401,6 @@ export function SettingsPage() {
                             <input
                                 id="export-path"
                                 type="text"
-                                title="Chemin d'export des fichiers"
-                                placeholder="C:\Users\Documents\OptiCut"
                                 className="input-field"
                                 value={settings.defaultExportPath}
                                 onChange={e => setSettings({ ...settings, defaultExportPath: e.target.value })}
@@ -597,8 +456,6 @@ export function SettingsPage() {
                                 type="number"
                                 min="30"
                                 step="5"
-                                title="Largeur de l'étiquette en mm"
-                                placeholder="80"
                                 className="input-field"
                                 value={settings.labelWidth}
                                 onChange={e => setSettings({ ...settings, labelWidth: parseInt(e.target.value) })}
@@ -613,8 +470,6 @@ export function SettingsPage() {
                                 type="number"
                                 min="20"
                                 step="5"
-                                title="Hauteur de l'étiquette en mm"
-                                placeholder="50"
                                 className="input-field"
                                 value={settings.labelHeight}
                                 onChange={e => setSettings({ ...settings, labelHeight: parseInt(e.target.value) })}
@@ -629,8 +484,6 @@ export function SettingsPage() {
                                 type="number"
                                 min="1"
                                 max="4"
-                                title="Nombre d'étiquettes par ligne"
-                                placeholder="2"
                                 className="input-field"
                                 value={settings.labelsPerRow}
                                 onChange={e => setSettings({ ...settings, labelsPerRow: parseInt(e.target.value) })}
@@ -644,8 +497,6 @@ export function SettingsPage() {
                                 id="labels-per-sheet"
                                 type="number"
                                 min="1"
-                                title="Nombre d'étiquettes par feuille A4"
-                                placeholder="10"
                                 className="input-field"
                                 value={settings.labelsPerSheet}
                                 onChange={e => setSettings({ ...settings, labelsPerSheet: parseInt(e.target.value) })}
@@ -653,6 +504,88 @@ export function SettingsPage() {
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    );
+
+
+
+    const tabs: TabConfig[] = [
+        {
+            id: 'theme',
+            label: 'Thème',
+            icon: <Palette size={16} />,
+            content: <ThemeCustomizationPanel />
+        },
+        {
+            id: 'navigation',
+            label: 'Navigation',
+            icon: <Compass size={16} />,
+            content: (
+                <div className="space-y-6">
+                    <NavigationAdminPanel />
+                    <NavigationUserPanel />
+                </div>
+            )
+        },
+        {
+            id: 'profile',
+            label: 'Profil',
+            icon: <Users size={16} />,
+            content: <UserProfiles />
+        },
+        {
+            id: 'access',
+            label: 'Accès',
+            icon: <Lock size={16} />,
+            adminOnly: true,
+            content: <UsersAdminPanel />
+        },
+        {
+            id: 'general',
+            label: 'Général',
+            icon: <Settings size={16} />,
+            content: renderGeneralTabContent()
+        },
+        {
+            id: 'tarification',
+            label: 'Tarification',
+            icon: <Euro size={16} />,
+            content: <TarificationPanel />
+        },
+        {
+            id: 'about',
+            label: 'À propos',
+            icon: <Info size={16} />,
+            content: <AboutPanel />
+        }
+    ];
+
+    return (
+        <div className="flex flex-col h-full bg-theme-bg-main w-full max-w-7xl mx-auto">
+            {/* Header Global */}
+            <div className="px-6 pt-6 pb-4">
+                <h1 className="text-2xl font-bold flex items-center gap-3 text-theme-text-main">
+                    <Settings className="h-6 w-6 text-theme-text-muted" />
+                    Paramètres
+                </h1>
+                <p className="text-theme-text-muted mt-1 text-sm">Configurez le logiciel selon vos préférences</p>
+            </div>
+
+            {/* Restoring modal overlay */}
+            {isRestoring && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+                    <div className="bg-theme-bg-card p-6 rounded-xl shadow-xl flex flex-col items-center border border-theme-primary/20">
+                        <RefreshCcw className="h-10 w-10 text-theme-primary animate-spin mb-4" />
+                        <h3 className="text-xl font-bold text-theme-text-main">Restauration en cours...</h3>
+                        <p className="text-theme-text-muted">Ne fermez pas cette page.</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Onglets et Contenu */}
+            <div className="flex-1 flex flex-col overflow-y-auto">
+                <SettingsTabs tabs={tabs} />
             </div>
         </div>
     );

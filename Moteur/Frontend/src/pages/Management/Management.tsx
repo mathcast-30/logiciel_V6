@@ -30,7 +30,9 @@ export interface AnalyticsData {
   profitability: {
     prevue: {debourse_sec: number, frais_generaux: number, benefice: number, margin_pct: number};
     reelle: {debourse_sec: number, frais_generaux: number, benefice: number, margin_pct: number};
-  }
+  };
+  /** Qualité des données : 'real' = tout vient de l'optimiseur, 'estimative' = tout estimé, 'partial' = mixte */
+  analytics_quality?: 'real' | 'estimative' | 'partial';
 }
 
 export const Management: React.FC = () => {
@@ -43,18 +45,24 @@ export const Management: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [ovRes, plRes, anRes] = await Promise.all([
+      const results = await Promise.allSettled([
         fetch('http://localhost:8000/api/management/overview'),
         fetch('http://localhost:8000/api/management/planning'),
         fetch('http://localhost:8000/api/management/analytics')
       ]);
 
-      if (ovRes.ok) setOverview(await ovRes.json());
-      if (plRes.ok) {
-        const plData = await plRes.json();
-        setProjects(plData.projects);
+      if (results[0].status === 'fulfilled' && results[0].value.ok) {
+        setOverview(await results[0].value.json());
       }
-      if (anRes.ok) setAnalytics(await anRes.json());
+      
+      if (results[1].status === 'fulfilled' && results[1].value.ok) {
+        const plData = await results[1].value.json();
+        setProjects(plData.projects || []);
+      }
+      
+      if (results[2].status === 'fulfilled' && results[2].value.ok) {
+        setAnalytics(await results[2].value.json());
+      }
 
     } catch (error) {
       console.error("Error fetching management data:", error);
@@ -118,6 +126,33 @@ export const Management: React.FC = () => {
     }
   };
 
+  const updateTarification = async (id: number, data: { marge_pct?: number, prix_vente_manuel?: number }) => {
+    // Optimistic update
+    setProjects(prev => prev.map(p => {
+      if (p.id === id) {
+        return {
+          ...p,
+          ...(data.marge_pct !== undefined && { marge_pct: data.marge_pct }),
+          ...(data.prix_vente_manuel !== undefined && { prix_vente_manuel: data.prix_vente_manuel }),
+        };
+      }
+      return p;
+    }));
+
+    try {
+      const res = await fetch(`http://localhost:8000/api/projects/${id}/tarification`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to update tarification');
+      toast.success('Tarification mise à jour');
+    } catch (e) {
+      toast.error('Erreur lors de la mise à jour de la tarification');
+      fetchData(); // revert
+    }
+  };
+
   const getIcon = (id: string) => {
     switch (id) {
       case 'overview': return <LayoutDashboard className="w-4 h-4 mr-2" />;
@@ -175,6 +210,8 @@ export const Management: React.FC = () => {
           <KanbanView 
             projects={projects} 
             updateStatus={updateStatus} 
+            updatePlanning={updatePlanning}
+            updateTarification={updateTarification}
           />
         )}
         
@@ -190,7 +227,7 @@ export const Management: React.FC = () => {
         )}
         
         {activeTab === 'time' && (
-          <TimeTracking projects={projects} />
+          <TimeTracking projects={projects} updatePlanning={updatePlanning} />
         )}
         
         {activeTab === 'stock' && (

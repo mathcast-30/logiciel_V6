@@ -1,10 +1,13 @@
 export type ProjectStatus = 'reflexion' | 'en_cours' | 'fini' | 'valide';
+export type CostSource = 'optimization' | 'parts' | 'none';
 
 export interface PlanningStep {
   label: string;
   start: string;   // YYYY-MM-DD
   end: string;     // YYYY-MM-DD
   color: string;   // hex
+  heures_prevues?: number;  // Heures de MO prévues pour cette étape
+  heures_reelles?: number;  // Heures de MO réelles passées
 }
 
 export interface ManagedProject {
@@ -20,6 +23,23 @@ export interface ManagedProject {
   actual_cost: number;
   estimated_hours: number;
   actual_hours: number;
+  marge_pct?: number;
+  prix_vente_manuel?: number;
+  source_cout_matieres?: CostSource;
+  // Coûts détaillés chargés à la demande (panel détail)
+  cout_detail?: {
+    cout_matieres: number;
+    source_cout_matieres: CostSource;
+    cout_main_oeuvre: number;
+    debourse_sec: number;
+    frais_generaux: number;
+    cout_de_revient: number;
+    benefice: number;
+    prix_vente: number;
+    marge_effective_pct: number;
+    taux_horaire_utilise: number;
+    marge_appliquee_pct: number;
+  };
 }
 
 export const STATUS_LABELS: Record<ProjectStatus, string> = {

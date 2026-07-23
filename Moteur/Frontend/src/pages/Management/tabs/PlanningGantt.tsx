@@ -301,6 +301,15 @@ export const PlanningGantt: React.FC<PlanningGanttProps> = ({ projects, updatePl
                           }} className="absolute -inset-2 w-12 h-12 cursor-pointer border-none p-0" />
                         </div>
                       </div>
+
+                      <div>
+                        <label className="block text-[10px] text-slate-500 mb-1">Heures prévues</label>
+                        <input type="number" step="0.5" min="0" value={step.heures_prevues || ''} onChange={e => {
+                          const newSteps = [...editForm.steps];
+                          newSteps[idx].heures_prevues = parseFloat(e.target.value) || undefined;
+                          setEditForm({...editForm, steps: newSteps});
+                        }} className="w-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1.5 text-xs focus:outline-none" placeholder="Ex: 2.5" />
+                      </div>
                       
                       <div className="pt-4">
                         <button onClick={() => {

@@ -179,6 +179,14 @@ def patch_project_planning(
             project.delivery_date = datetime.fromisoformat(delivery_date.replace("Z", "+00:00")) if delivery_date else None
         if steps is not None:
             project.steps_json = json.dumps(steps)
+            # Synchro automatique de estimated_hours = somme des heures_prevues par étape
+            total_heures_prevues = sum(float(s.get('heures_prevues', 0) or 0) for s in steps)
+            if total_heures_prevues > 0:
+                project.estimated_hours = total_heures_prevues
+                
+            total_heures_reelles = sum(float(s.get('heures_reelles', 0) or 0) for s in steps)
+            if total_heures_reelles > 0:
+                project.actual_hours = total_heures_reelles
             
         db.commit()
         db.refresh(project)
@@ -187,6 +195,85 @@ def patch_project_planning(
         logger.error(f"Error updating planning: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
+
+class ProjectTarificationUpdate(BaseModel):
+    marge_pct: Optional[float] = None
+    prix_vente_manuel: Optional[float] = None
+
+@router.get("/{project_id}/cout-detaille")
+def get_project_cout_detaille(project_id: int, db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    from app.models import Material
+    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Projet non trouvé")
+    
+    tarification = db.execute(text("SELECT taux_horaire, marge_defaut_pct, frais_generaux_pct FROM tarification_globale WHERE id = 1")).fetchone()
+    taux_horaire = tarification[0] if tarification and tarification[0] is not None else 35.0
+    frais_gen_pct = tarification[2] if tarification and tarification[2] is not None else 10.0
+    
+    mat_cost = 0.0
+    source_cout = "none"
+    
+    from app.models import OptimizationResult
+    opt = db.query(OptimizationResult).filter(OptimizationResult.project_id == project.id).order_by(OptimizationResult.id.desc()).first()
+    
+    if opt and opt.total_cost is not None and opt.total_cost > 0:
+        mat_cost = opt.total_cost
+        source_cout = "optimization"
+    else:
+        parts = db.query(PartModel).filter(PartModel.project_id == project.id).all()
+        if len(parts) > 0:
+            for part in parts:
+                if part.material_id:
+                    material = db.query(Material).filter(Material.id == part.material_id).first()
+                    if material:
+                        area_m2 = (part.width * part.height * part.quantity) / 1_000_000
+                        mat_cost += area_m2 * (material.cost_per_sqm or 0.0)
+            source_cout = "parts"
+                
+    mo_cost_prevu = float(project.estimated_hours or 0.0) * taux_horaire
+    ds = mat_cost + mo_cost_prevu
+    fg = ds * (frais_gen_pct / 100.0)
+    cr = ds + fg
+    marge = project.marge_pct if project.marge_pct is not None else (tarification[1] if tarification and tarification[1] is not None else 30.0)
+    
+    if project.prix_vente_manuel and project.prix_vente_manuel > 0:
+        prix_vente = project.prix_vente_manuel
+    else:
+        prix_vente = cr / (1 - (marge / 100.0)) if marge < 100 else cr
+        
+    benefice = prix_vente - cr
+    margin_effective = (benefice / prix_vente * 100) if prix_vente > 0 else 0
+    
+    return {
+        "cout_matieres": mat_cost,
+        "source_cout_matieres": source_cout,
+        "cout_main_oeuvre": mo_cost_prevu,
+        "debourse_sec": ds,
+        "frais_generaux": fg,
+        "cout_de_revient": cr,
+        "benefice": benefice,
+        "prix_vente": prix_vente,
+        "marge_effective_pct": margin_effective,
+        "taux_horaire_utilise": taux_horaire,
+        "marge_appliquee_pct": marge
+    }
+
+@router.patch("/{project_id}/tarification")
+def update_project_tarification(project_id: int, payload: ProjectTarificationUpdate, db: Session = Depends(get_db)):
+    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Projet non trouvé")
+        
+    if payload.marge_pct is not None:
+        project.marge_pct = payload.marge_pct
+    if payload.prix_vente_manuel is not None:
+        project.prix_vente_manuel = payload.prix_vente_manuel
+        
+    db.commit()
+    db.refresh(project)
+    return project
 
 
 @router.patch("/{project_id}/assign-client")
@@ -356,3 +443,176 @@ def open_project_folder(project_id: int, db: Session = Depends(get_db)):
         return {"success": True, "path": str(project_path)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Impossible d'ouvrir le dossier: {str(e)}")
+
+
+@router.get("/{project_id}/cout-detaille")
+def get_cout_detaille(project_id: int, db: Session = Depends(get_db)):
+    """
+    Calcule le coût détaillé d'un projet :
+    - Déboursé sec = coût matières (surface des pièces × prix lot de stock, ou à défaut prix matériau)
+    - MO prévue = estimated_hours × taux_horaire
+    - Frais généraux = (déboursé + MO) × frais_generaux_pct
+    - Prix de vente calculé avec marge (projet > défaut global)
+    - Prix de vente manuel si renseigné (override)
+    """
+    import json
+    from sqlalchemy import text
+    from app.models import Material as MaterialModel, Stock as StockModel
+
+    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Projet non trouvé")
+
+    # 1. Tarification globale
+    tarif_row = db.execute(
+        text("SELECT taux_horaire, marge_defaut_pct, frais_generaux_pct FROM tarification_globale WHERE id = 1")
+    ).fetchone()
+    taux_horaire = float(tarif_row[0]) if tarif_row and tarif_row[0] else 35.0
+    marge_defaut_pct = float(tarif_row[1]) if tarif_row and tarif_row[1] else 30.0
+    frais_generaux_pct = float(tarif_row[2]) if tarif_row and tarif_row[2] else 10.0
+
+    # Marge effective (projet-spécifique ou défaut global)
+    marge_pct = float(project.marge_pct) if getattr(project, 'marge_pct', None) is not None else marge_defaut_pct
+
+    # 2. Coût matières depuis les pièces du projet
+    parts = db.query(PartModel).filter(PartModel.project_id == project_id).all()
+    cout_matieres = 0.0
+    detail_materiaux = {}
+
+    for part in parts:
+        if not part.material_id:
+            continue
+        material = db.query(MaterialModel).filter(MaterialModel.id == part.material_id).first()
+        if not material:
+            continue
+
+        # Surface d'une pièce en m² (dimensions en mm)
+        area_m2_per_piece = (part.width / 1000.0) * (part.height / 1000.0)
+        total_area_m2 = area_m2_per_piece * part.quantity
+
+        # Chercher le prix par lot de stock (prix_unitaire) -- source prioritaire
+        # On cherche un lot de stock associé à ce matériau avec un prix saisi
+        stock_item = db.query(StockModel).filter(
+            StockModel.material_id == part.material_id,
+            StockModel.prix_unitaire != None,
+            StockModel.prix_unitaire > 0
+        ).order_by(StockModel.id.desc()).first()
+
+        if stock_item and stock_item.prix_unitaire:
+            unite = getattr(stock_item, 'unite_prix', 'm2') or 'm2'
+            prix = float(stock_item.prix_unitaire)
+        elif material.cost_per_sqm and material.cost_per_sqm > 0:
+            unite = getattr(material, 'price_type', 'm2') or 'm2'
+            prix = float(material.cost_per_sqm)
+        else:
+            unite = 'm2'
+            prix = 0.0
+
+        if unite == 'unit':
+            cout_piece = prix * part.quantity
+        elif unite == 'm3':
+            thickness_m = (material.thickness / 1000.0) if material.thickness else 0.02
+            volume_m3 = total_area_m2 * thickness_m
+            cout_piece = volume_m3 * prix
+        else:  # m2
+            cout_piece = total_area_m2 * prix
+
+        cout_matieres += cout_piece
+
+        mat_name = material.name
+        if mat_name not in detail_materiaux:
+            detail_materiaux[mat_name] = {"area_m2": 0.0, "cout": 0.0}
+        detail_materiaux[mat_name]["area_m2"] += total_area_m2
+        detail_materiaux[mat_name]["cout"] += cout_piece
+
+    # 3. Coût main d'oeuvre
+    estimated_hours = float(project.estimated_hours or 0)
+    actual_hours = float(project.actual_hours or 0)
+    cout_mo_prevu = estimated_hours * taux_horaire
+    cout_mo_reel = actual_hours * taux_horaire
+
+    # 4. Frais généraux
+    debourse_prevu = cout_matieres + cout_mo_prevu
+    debourse_reel = cout_matieres + cout_mo_reel
+    frais_gen_prevu = debourse_prevu * (frais_generaux_pct / 100.0)
+    frais_gen_reel = debourse_reel * (frais_generaux_pct / 100.0)
+
+    # 5. Prix de vente calculé (avec marge)
+    # Prix = coût total / (1 - marge)
+    def prix_vente_calcule(debourse: float, frais: float, marge: float) -> float:
+        total = debourse + frais
+        if marge >= 100:
+            return total * 10  # garde-fou
+        return total / (1.0 - marge / 100.0) if marge < 100 else total
+
+    pv_prevu = prix_vente_calcule(debourse_prevu, frais_gen_prevu, marge_pct)
+    benefice_prevu = pv_prevu - debourse_prevu - frais_gen_prevu
+    margin_pct_reelle = (benefice_prevu / pv_prevu * 100) if pv_prevu > 0 else 0
+
+    # Prix de vente manuel (override)
+    prix_vente_manuel = getattr(project, 'prix_vente_manuel', None)
+    prix_vente_final = float(prix_vente_manuel) if prix_vente_manuel else round(pv_prevu, 2)
+
+    return {
+        "project_id": project_id,
+        "project_name": project.name,
+        "tarification": {
+            "taux_horaire": taux_horaire,
+            "marge_pct": marge_pct,
+            "frais_generaux_pct": frais_generaux_pct,
+            "prix_vente_manuel_actif": prix_vente_manuel is not None,
+        },
+        "matieres": {
+            "total": round(cout_matieres, 2),
+            "detail": [
+                {"materiau": k, "area_m2": round(v["area_m2"], 3), "cout": round(v["cout"], 2)}
+                for k, v in detail_materiaux.items()
+            ]
+        },
+        "main_oeuvre": {
+            "heures_prevues": estimated_hours,
+            "heures_reelles": actual_hours,
+            "cout_prevu": round(cout_mo_prevu, 2),
+            "cout_reel": round(cout_mo_reel, 2),
+        },
+        "prevue": {
+            "debourse_sec": round(debourse_prevu, 2),
+            "frais_generaux": round(frais_gen_prevu, 2),
+            "benefice": round(benefice_prevu, 2),
+            "prix_vente_calcule": round(pv_prevu, 2),
+            "marge_pct": round(margin_pct_reelle, 1),
+        },
+        "prix_vente_final": prix_vente_final,
+    }
+
+
+@router.patch("/{project_id}/tarification")
+def patch_project_tarification(
+    project_id: int,
+    marge_pct: Optional[float] = Body(None),
+    prix_vente_manuel: Optional[float] = Body(None),
+    reset_prix_manuel: bool = Body(False),
+    db: Session = Depends(get_db)
+):
+    """
+    Met à jour la marge spécifique et/ou le prix de vente manuel d'un projet.
+    reset_prix_manuel=True efface le prix manuel (revient au calcul auto).
+    """
+    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Projet non trouvé")
+
+    if marge_pct is not None:
+        project.marge_pct = marge_pct
+    if reset_prix_manuel:
+        project.prix_vente_manuel = None
+    elif prix_vente_manuel is not None:
+        project.prix_vente_manuel = prix_vente_manuel
+
+    db.commit()
+    db.refresh(project)
+    return {
+        "message": "Tarification projet mise à jour",
+        "marge_pct": getattr(project, 'marge_pct', None),
+        "prix_vente_manuel": getattr(project, 'prix_vente_manuel', None),
+    }
