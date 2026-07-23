@@ -23,9 +23,16 @@ class BackupManager:
     temp_dir: Path
 
     def __init__(self) -> None:
-        # Configuration des chemins
-        self.base_dir = Path(os.getcwd()) / "Moteur" / "UserData"
-        self.db_path = self.base_dir / "opticut.db"
+        # Configuration des chemins robustes
+        current_path = Path(__file__).resolve()
+        try:
+            moteur_index = current_path.parts.index("Moteur")
+            base_engine_dir = Path(*current_path.parts[:moteur_index+1])
+        except ValueError:
+            base_engine_dir = current_path.parent.parent.parent.parent.parent
+
+        self.base_dir = base_engine_dir / "UserData"
+        self.db_path = self.base_dir / "BaseDeDonnees" / "opticut.db"
         self.documents_path = self.base_dir / "Documents"
         self.backup_dir = self.base_dir / "Sauvegardes" / "Backups"
         self.temp_dir = self.backup_dir / ".temp"
@@ -89,8 +96,18 @@ class BackupManager:
                 shutil.rmtree(staging_dir)
             staging_dir.mkdir()
 
-            # DB
-            _ = shutil.copy2(self.db_path, staging_dir / "opticut.db")
+            # DB (Copie sécurisée via sqlite3 pour éviter le lock)
+            import sqlite3
+            dest_db = staging_dir / "opticut.db"
+            try:
+                uri_path = self.db_path.as_uri() + "?mode=ro"
+                src = sqlite3.connect(uri_path, uri=True)
+                dst = sqlite3.connect(dest_db)
+                src.backup(dst)
+                src.close()
+                dst.close()
+            except sqlite3.OperationalError:
+                _ = shutil.copy2(self.db_path, dest_db)
             
             # Documents
             if self.documents_path.exists():
@@ -169,7 +186,7 @@ class BackupManager:
                     pass
 
         if deleted_count > 0:
-            print(f"[RETENTION] ✓ {deleted_count} sauvegarde(s) supprimée(s), {self._format_size(deleted_size)} libéré(s)")
+            print(f"[RETENTION] OK {deleted_count} sauvegarde(s) supprimée(s), {self._format_size(deleted_size)} libéré(s)")
 
     def _format_size(self, size_bytes: int) -> str:
         """Formate la taille en unités lisibles"""

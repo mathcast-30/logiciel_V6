@@ -42,6 +42,7 @@ class StockItemResponse(BaseModel):
     material_id: int
     material_name: str
     material_species: str | None
+    thickness: float
     is_panel: bool
     width: float
     height: float
@@ -51,6 +52,47 @@ class StockItemResponse(BaseModel):
     has_defects: bool
     label: str | None
     quality_score: float
+    prix_unitaire: float | None = None
+    unite_prix: str | None = None
+
+
+@router.get("", response_model=list[StockItemResponse])
+def get_all_stock(db: Session = Depends(get_db)) -> list[StockItemResponse]:
+    """Get all stock items."""
+    query = db.query(Stock).join(Material).filter(Stock.quantity > 0)
+    stock_items = query.all()
+    
+    response = []
+    for stock_item in stock_items:
+        has_defects = False
+        defects_val = cast(Any, stock_item.defects)
+        if defects_val:
+            try:
+                defects_data = json.loads(str(defects_val))
+                has_defects = len(defects_data) > 0
+            except (json.JSONDecodeError, TypeError):
+                has_defects = False
+
+        response.append(StockItemResponse(
+            id=int(cast(Any, stock_item.id)),
+            material_id=int(cast(Any, stock_item.material_id)),
+            material_name=str(cast(Any, stock_item.material).name),
+            material_species=cast("str | None", cast(Any, stock_item.material).species),
+            thickness=float(cast(Any, stock_item.material).thickness),
+            is_panel=bool(cast(Any, stock_item.material).is_panel),
+            width=float(cast(Any, stock_item.width)),
+            height=float(cast(Any, stock_item.height)),
+            quantity=int(cast(Any, stock_item.quantity)),
+            is_offcut=bool(cast(Any, stock_item.is_offcut)),
+            grain_direction=int(cast(Any, stock_item.grain_direction)),
+            has_defects=has_defects,
+            label=cast("str | None", stock_item.label),
+            quality_score=float(cast(Any, stock_item.quality_score)),
+            prix_unitaire=float(getattr(stock_item, 'prix_unitaire', 0)) if getattr(stock_item, 'prix_unitaire', None) is not None else None,
+            unite_prix=getattr(stock_item, 'unite_prix', 'm2') or 'm2'
+        ))
+    
+    return response
 
 
 @router.post("/filter", response_model=list[StockItemResponse])
@@ -135,6 +177,7 @@ def filter_stock(
             material_id=int(cast(Any, stock_item.material_id)),
             material_name=str(cast(Any, stock_item.material).name),
             material_species=cast("str | None", cast(Any, stock_item.material).species),
+            thickness=float(cast(Any, stock_item.material).thickness),
             is_panel=bool(cast(Any, stock_item.material).is_panel),
             width=float(cast(Any, stock_item.width)),
             height=float(cast(Any, stock_item.height)),
@@ -143,7 +186,9 @@ def filter_stock(
             grain_direction=int(cast(Any, stock_item.grain_direction)),
             has_defects=has_defects,
             label=cast("str | None", stock_item.label),
-            quality_score=float(cast(Any, stock_item.quality_score))
+            quality_score=float(cast(Any, stock_item.quality_score)),
+            prix_unitaire=float(getattr(stock_item, 'prix_unitaire', 0)) if getattr(stock_item, 'prix_unitaire', None) is not None else None,
+            unite_prix=getattr(stock_item, 'unite_prix', 'm2') or 'm2'
         ))
     
     return response
@@ -268,3 +313,57 @@ def check_stock_availability(
     
     return {"availability": result}
 
+
+class StockUpdate(BaseModel):
+    quantity: int | None = None
+    prix_unitaire: float | None = None
+    unite_prix: str | None = None
+
+@router.patch("/{stock_id}", response_model=StockItemResponse)
+def update_stock(
+    stock_id: int,
+    stock_update: StockUpdate,
+    db: Session = Depends(get_db)
+) -> StockItemResponse:
+    """Update stock properties like quantity and price."""
+    stock_item = db.query(Stock).filter(Stock.id == stock_id).first()
+    if not stock_item:
+        raise HTTPException(status_code=404, detail="Stock item not found")
+    
+    if stock_update.quantity is not None:
+        stock_item.quantity = stock_update.quantity
+    if stock_update.prix_unitaire is not None:
+        setattr(stock_item, 'prix_unitaire', stock_update.prix_unitaire)
+    if stock_update.unite_prix is not None:
+        setattr(stock_item, 'unite_prix', stock_update.unite_prix)
+        
+    db.commit()
+    db.refresh(stock_item)
+    
+    has_defects = False
+    defects_val = cast(Any, stock_item.defects)
+    if defects_val:
+        try:
+            defects_data = json.loads(str(defects_val))
+            has_defects = len(defects_data) > 0
+        except (json.JSONDecodeError, TypeError):
+            has_defects = False
+
+    return StockItemResponse(
+        id=int(cast(Any, stock_item.id)),
+        material_id=int(cast(Any, stock_item.material_id)),
+        material_name=str(cast(Any, stock_item.material).name),
+        material_species=cast("str | None", cast(Any, stock_item.material).species),
+        thickness=float(cast(Any, stock_item.material).thickness),
+        is_panel=bool(cast(Any, stock_item.material).is_panel),
+        width=float(cast(Any, stock_item.width)),
+        height=float(cast(Any, stock_item.height)),
+        quantity=int(cast(Any, stock_item.quantity)),
+        is_offcut=bool(cast(Any, stock_item.is_offcut)),
+        grain_direction=int(cast(Any, stock_item.grain_direction)),
+        has_defects=has_defects,
+        label=cast("str | None", stock_item.label),
+        quality_score=float(cast(Any, stock_item.quality_score)),
+        prix_unitaire=float(getattr(stock_item, 'prix_unitaire', 0)) if getattr(stock_item, 'prix_unitaire', None) is not None else None,
+        unite_prix=getattr(stock_item, 'unite_prix', 'm2') or 'm2'
+    )

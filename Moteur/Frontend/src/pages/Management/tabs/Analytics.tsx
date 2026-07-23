@@ -9,9 +9,22 @@ interface AnalyticsProps {
 export const Analytics: React.FC<AnalyticsProps> = ({ analytics }) => {
   const marginPrevue = analytics.profitability.prevue.margin_pct;
   const marginReelle = analytics.profitability.reelle.margin_pct;
+  const hasEstimatif = analytics.analytics_quality === 'estimative' || analytics.analytics_quality === 'partial';
 
   return (
     <div className="space-y-6">
+      {/* Bandeau estimatif global si données incomplètes */}
+      {hasEstimatif && (
+        <div className="flex items-start gap-3 px-4 py-3 bg-amber-500/10 border border-amber-400/30 rounded-xl text-sm text-amber-600 dark:text-amber-400">
+          <span className="mt-0.5 flex-shrink-0">⚠</span>
+          <div>
+            <strong>Données partiellement estimatives</strong> — Certains projets n'ont pas encore de résultat d'optimisation.
+            Les coûts matières de ces projets sont estimés sur la surface nette des pièces (hors chutes réelles),
+            ce qui peut sous-estimer le coût réel. Les totaux ci-dessous incluent ces estimations.
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Graphique 1 — Donut rentabilité */}

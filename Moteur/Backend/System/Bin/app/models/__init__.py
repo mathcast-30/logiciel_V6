@@ -208,6 +208,8 @@ class Stock(Base):
     defects: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON: list of defect polygons
     label: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # Optional label/identifier
     quality_score: Mapped[float] = mapped_column(Float, default=1.0)  # 0-1 score for remnant usefulness
+    prix_unitaire: Mapped[float] = mapped_column(Float, default=0.0)
+    unite_prix: Mapped[str] = mapped_column(String, default="m2")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -227,6 +229,13 @@ class Project(Base):
     status: Mapped[str] = mapped_column(String, default="draft")  # draft, validated, in_progress, done
     start_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     delivery_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    steps_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True, default="[]")
+    estimated_cost: Mapped[float] = mapped_column(Float, default=0.0)
+    actual_cost: Mapped[float] = mapped_column(Float, default=0.0)
+    estimated_hours: Mapped[float] = mapped_column(Float, default=0.0)
+    actual_hours: Mapped[float] = mapped_column(Float, default=0.0)
+    marge_pct: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    prix_vente_manuel: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     
     # Relationships
     client: Mapped[Optional[Client]] = relationship("Client", back_populates="projects")

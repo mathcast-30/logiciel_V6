@@ -4,6 +4,9 @@ import { ManagedProject } from '../../../config/managementConfig';
 import { Activity, TrendingUp, AlertTriangle, Package, ChevronRight } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 
+// Calculé au niveau module = pas de re-render, pas d'impureté
+const TODAY_MS = new Date().setHours(0, 0, 0, 0);
+
 interface OverviewProps {
   overview: OverviewData;
   analytics: AnalyticsData;
@@ -14,7 +17,6 @@ interface OverviewProps {
 export const Overview: React.FC<OverviewProps> = ({ overview, analytics, projects, onNavigate }) => {
   const kMetricColor = overview.k_metric_avg > 85 ? 'text-green-500' : 'text-red-500';
   const stockColor = overview.stock_critical_count > 0 ? 'text-red-500' : 'text-green-500';
-
   const marginPct = analytics.profitability.reelle.margin_pct;
 
   return (
@@ -78,7 +80,7 @@ export const Overview: React.FC<OverviewProps> = ({ overview, analytics, project
                   <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value: number) => `${value} €`} />
+              <Tooltip formatter={(v) => [`${Number(v).toFixed(0)} €`, '']} />
             </PieChart>
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <span className="text-sm font-bold text-theme-text-main">{marginPct.toFixed(0)}%</span>
@@ -93,21 +95,41 @@ export const Overview: React.FC<OverviewProps> = ({ overview, analytics, project
             <span className="text-sm text-theme-primary flex items-center">Voir tout <ChevronRight className="w-4 h-4 ml-1" /></span>
           </div>
           <div className="space-y-3">
-            {projects.filter(p => p.delivery_date && ['en_cours', 'reflexion'].includes(p.status)).sort((a,b) => new Date(a.delivery_date!).getTime() - new Date(b.delivery_date!).getTime()).slice(0, 5).map(p => (
-              <div key={p.id} className="flex items-center text-sm">
-                <div className="w-32 font-medium text-theme-text-main truncate">{p.name}</div>
-                <div className="flex-1 bg-theme-bg-sidebar h-4 rounded-full overflow-hidden mx-4 relative">
-                    <div 
-                      className={`absolute top-0 bottom-0 left-0 ${p.progress < 1 ? 'bg-theme-primary' : 'bg-green-500'}`} 
-                      style={{ width: `${Math.max(5, p.progress * 100)}%` }}
-                    />
-                </div>
-                <div className="w-24 text-right text-theme-text-muted">{p.delivery_date}</div>
-              </div>
-            ))}
-            {projects.length === 0 && (
-              <p className="text-sm text-theme-text-muted text-center py-4">Aucun projet planifié</p>
-            )}
+            {(() => {
+              const livraisons = projects
+                .filter(p => p.delivery_date && p.status === 'en_cours')
+                .sort((a, b) => new Date(a.delivery_date!).getTime() - new Date(b.delivery_date!).getTime())
+                .slice(0, 5);
+              
+              if (livraisons.length === 0) {
+                return (
+                  <p className="text-sm text-theme-text-muted text-center py-4 italic">
+                    Aucun projet "En cours" avec une date de livraison définie
+                  </p>
+                );
+              }
+              
+              return livraisons.map(p => {
+                const daysLeft = p.delivery_date
+                  ? Math.ceil((new Date(p.delivery_date).getTime() - TODAY_MS) / 86400000)
+                  : null;
+                const isUrgent = daysLeft !== null && daysLeft <= 7;
+                return (
+                  <div key={p.id} className="flex items-center text-sm">
+                    <div className="w-32 font-medium text-theme-text-main truncate">{p.name}</div>
+                    <div className="flex-1 bg-theme-bg-sidebar h-4 rounded-full overflow-hidden mx-4 relative">
+                      <div
+                        className={`absolute top-0 bottom-0 left-0 ${p.progress >= 1 ? 'bg-green-500' : isUrgent ? 'bg-red-500' : 'bg-theme-primary'}`}
+                        style={{ width: `${Math.max(5, p.progress * 100)}%` }}
+                      />
+                    </div>
+                    <div className={`w-24 text-right text-xs font-medium ${isUrgent ? 'text-red-500' : 'text-theme-text-muted'}`}>
+                      {daysLeft !== null && daysLeft >= 0 ? `J-${daysLeft}` : p.delivery_date}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
       </div>

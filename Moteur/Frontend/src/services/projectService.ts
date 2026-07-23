@@ -60,6 +60,23 @@ export const ProjectService = {
         return response.data;
     },
 
+    getCostDetaille: async (id: number): Promise<{
+        cout_matieres: number;
+        source_cout_matieres: "optimization" | "parts" | "none";
+        cout_main_oeuvre: number;
+        debourse_sec: number;
+        frais_generaux: number;
+        cout_de_revient: number;
+        benefice: number;
+        prix_vente: number;
+        marge_effective_pct: number;
+        taux_horaire_utilise: number;
+        marge_appliquee_pct: number;
+    }> => {
+        const response = await api.get(`/projects/${id}/cout-detaille`);
+        return response.data;
+    },
+
     assignClient: async (id: number, client_id: number | null): Promise<Project> => {
         const response = await api.patch<Project>(`/projects/${id}/assign-client`, { client_id });
         return response.data;

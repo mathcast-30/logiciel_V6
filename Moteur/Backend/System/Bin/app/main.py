@@ -27,7 +27,7 @@ from .db.database import engine, Base
 from .routers import (
     projects, materials, optimize, stock, clients, 
     suppliers, hardware, ai, step_import, stats,
-    exports, backups, qr, quotes, scraping, orders, templates, files, management
+    exports, backups, qr, quotes, scraping, orders, templates, files, management, auth, users, settings
 )
 
 # Import professional monitoring system
@@ -36,6 +36,24 @@ from .monitoring_client import log_info, log_error
 # Automatically create database tables (Safe for SQLite)
 try:
     Base.metadata.create_all(bind=engine)
+    
+    from sqlalchemy import text
+    with engine.begin() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS users (
+              id              INTEGER PRIMARY KEY AUTOINCREMENT,
+              nom             TEXT NOT NULL,
+              prenom          TEXT NOT NULL,
+              identifiant     TEXT NOT NULL UNIQUE,
+              password_hash   TEXT NOT NULL,
+              role            TEXT NOT NULL DEFAULT 'operateur',
+              actif           BOOLEAN NOT NULL DEFAULT 1,
+              must_change_pwd BOOLEAN NOT NULL DEFAULT 1,
+              derniere_connexion DATETIME,
+              created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+              avatar_color    TEXT DEFAULT '#6C63FF'
+            )
+        """))
 except Exception as e:
     # We log via local print if server is not yet ready, 
     # but monitoring_client is designed to be safe.
@@ -58,11 +76,64 @@ try:
         for query in migrations:
             try:
                 conn.execute(text(query))
+                print(f"✅ Migration colonnes projects OK : {query.split('ADD COLUMN ')[-1].split(' ')[0]}")
             except Exception as e:
                 # Column likely exists
                 pass
+
+        # Cas B : Valeurs NULL sur projets existants
+        updates = [
+            "UPDATE projects SET status = 'reflexion' WHERE status IS NULL OR status = 'draft';",
+            "UPDATE projects SET status = 'fini' WHERE status = 'done';",
+            "UPDATE projects SET steps_json = '[]' WHERE steps_json IS NULL;",
+            "UPDATE projects SET estimated_cost = 0.0 WHERE estimated_cost IS NULL;",
+            "UPDATE projects SET actual_cost = 0.0 WHERE actual_cost IS NULL;",
+            "UPDATE projects SET estimated_hours = 0.0 WHERE estimated_hours IS NULL;",
+            "UPDATE projects SET actual_hours = 0.0 WHERE actual_hours IS NULL;"
+        ]
+        for query in updates:
+            try:
+                conn.execute(text(query))
+            except Exception as e:
+                pass
+        print("✅ Migration de rattrapage des données OK")
 except Exception as e:
     print(f"[MIGRATION ERROR] Management Hub migration failed: {e}")
+
+# Migrations Système Tarifaire
+try:
+    from sqlalchemy import text
+    with engine.begin() as conn:
+        # -- Table tarification globale (singleton) --
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS tarification_globale (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                taux_horaire REAL DEFAULT 35.0,
+                marge_defaut_pct REAL DEFAULT 30.0,
+                frais_generaux_pct REAL DEFAULT 10.0
+            )
+        """))
+        conn.execute(text("INSERT OR IGNORE INTO tarification_globale (id) VALUES (1)"))
+
+        # -- Colonnes prix par lot de stock (prix distinct du matériau) --
+        tarif_migrations = [
+            "ALTER TABLE stock ADD COLUMN prix_unitaire REAL DEFAULT 0.0",
+            "ALTER TABLE stock ADD COLUMN unite_prix TEXT DEFAULT 'm2'",
+            # Colonnes projets : marge spécifique et prix de vente manuel
+            "ALTER TABLE projects ADD COLUMN marge_pct REAL",
+            "ALTER TABLE projects ADD COLUMN prix_vente_manuel REAL",
+        ]
+        for query in tarif_migrations:
+            try:
+                conn.execute(text(query))
+                col = query.split('ADD COLUMN ')[-1].split(' ')[0]
+                print(f"✅ Migration tarifaire OK : {col}")
+            except Exception:
+                pass  # Colonne déjà existante
+
+        print("✅ Migrations tarifaires OK")
+except Exception as e:
+    print(f"[MIGRATION ERROR] Tarification migration failed: {e}")
 
 
 # Initialize FastAPI Application
@@ -154,6 +225,9 @@ app.include_router(templates.router, prefix="/api/templates", tags=["Modèles"])
 app.include_router(exports.router, prefix="/api/exports", tags=["Exports"])
 app.include_router(files.router, prefix="/api/file-explorer", tags=["Explorateur Fichiers"])
 app.include_router(management.router, prefix="/api/management", tags=["management"])
+app.include_router(settings.router, prefix="/api/settings", tags=["Paramètres"])
+app.include_router(auth.router, prefix="/api", tags=["auth"])
+app.include_router(users.router, prefix="/api", tags=["users"])
 
 @app.on_event("startup")
 async def startup_event():
