@@ -423,3 +423,31 @@ class StepModel(Base):
     extracted_parts: Mapped[list[Part]] = relationship("Part", back_populates="step_model", foreign_keys="Part.step_model_id")
 
 
+class User(Base):
+    """User accounts and roles."""
+    __tablename__ = "users"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    nom: Mapped[str] = mapped_column(String, nullable=False)
+    prenom: Mapped[str] = mapped_column(String, nullable=False)
+    identifiant: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+    role: Mapped[str] = mapped_column(String, default="operateur", nullable=False)
+    actif: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    must_change_pwd: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    derniere_connexion: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    avatar_color: Mapped[Optional[str]] = mapped_column(String, default="#6C63FF", nullable=True)
+
+
+class TarificationGlobale(Base):
+    """Global pricing configuration singleton."""
+    __tablename__ = "tarification_globale"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    taux_horaire: Mapped[float] = mapped_column(Float, default=35.0, nullable=False)
+    marge_defaut_pct: Mapped[float] = mapped_column(Float, default=30.0, nullable=False)
+    frais_generaux_pct: Mapped[float] = mapped_column(Float, default=10.0, nullable=False)
+
+
+

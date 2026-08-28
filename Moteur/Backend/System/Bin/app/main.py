@@ -1,27 +1,30 @@
 from __future__ import annotations
-from fastapi import FastAPI, Request
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+import os
 import json
-from starlette.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 import time
-import uvicorn
 import sys
 from pathlib import Path
 
+from fastapi import FastAPI, Request, Depends, BackgroundTasks
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.cors import CORSMiddleware
+import uvicorn
+
 # Add Services directory to sys.path to allow importing IA_Engine and others
-current_dir = Path(__file__).resolve().parent # app/
-bin_dir = current_dir.parent # Bin/
-system_dir = bin_dir.parent # System/
-backend_dir = system_dir.parent # Backend/
+current_dir = Path(__file__).resolve().parent  # app/
+bin_dir = current_dir.parent  # Bin/
+system_dir = bin_dir.parent  # System/
+backend_dir = system_dir.parent  # Backend/
 services_dir = backend_dir / "Services"
 
 if str(services_dir) not in sys.path:
     sys.path.append(str(services_dir))
 
 # Import database configuration
-from .db.database import engine, Base
+from .db.database import engine, Base, SQLALCHEMY_DATABASE_URL
+from .dependencies import get_current_user
 
 # Import all API routers
 from .routers import (
@@ -33,127 +36,67 @@ from .routers import (
 # Import professional monitoring system
 from .monitoring_client import log_info, log_error
 
-# Automatically create database tables (Safe for SQLite)
-try:
-    Base.metadata.create_all(bind=engine)
-    
-    from sqlalchemy import text
-    with engine.begin() as conn:
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS users (
-              id              INTEGER PRIMARY KEY AUTOINCREMENT,
-              nom             TEXT NOT NULL,
-              prenom          TEXT NOT NULL,
-              identifiant     TEXT NOT NULL UNIQUE,
-              password_hash   TEXT NOT NULL,
-              role            TEXT NOT NULL DEFAULT 'operateur',
-              actif           BOOLEAN NOT NULL DEFAULT 1,
-              must_change_pwd BOOLEAN NOT NULL DEFAULT 1,
-              derniere_connexion DATETIME,
-              created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
-              avatar_color    TEXT DEFAULT '#6C63FF'
-            )
-        """))
-except Exception as e:
-    # We log via local print if server is not yet ready, 
-    # but monitoring_client is designed to be safe.
-    print(f"[DB ERROR] Table creation failed: {e}")
 
-# Migrations for Management Hub
-try:
-    from sqlalchemy import text
-    with engine.begin() as conn:
-        migrations = [
-            "ALTER TABLE projects ADD COLUMN status TEXT DEFAULT 'reflexion'",
-            "ALTER TABLE projects ADD COLUMN delivery_date DATE",
-            "ALTER TABLE projects ADD COLUMN start_date DATE",
-            "ALTER TABLE projects ADD COLUMN steps_json TEXT DEFAULT '[]'",
-            "ALTER TABLE projects ADD COLUMN estimated_cost REAL DEFAULT 0.0",
-            "ALTER TABLE projects ADD COLUMN actual_cost REAL DEFAULT 0.0",
-            "ALTER TABLE projects ADD COLUMN estimated_hours REAL DEFAULT 0.0",
-            "ALTER TABLE projects ADD COLUMN actual_hours REAL DEFAULT 0.0"
-        ]
-        for query in migrations:
-            try:
-                conn.execute(text(query))
-                print(f"✅ Migration colonnes projects OK : {query.split('ADD COLUMN ')[-1].split(' ')[0]}")
-            except Exception as e:
-                # Column likely exists
-                pass
+def run_db_migrations():
+    """
+    Run Alembic database migrations programmatically on startup.
+    Ensures all tables and schema changes are versioned and up-to-date.
+    """
+    try:
+        from alembic.config import Config
+        from alembic import command
+        
+        alembic_ini_path = bin_dir / "alembic.ini"
+        if alembic_ini_path.exists():
+            alembic_cfg = Config(str(alembic_ini_path))
+            alembic_cfg.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
+            command.upgrade(alembic_cfg, "head")
+            print("[OK] Migrations Alembic appliquees avec succes (head).")
+            log_info("Database", "Migrations", "Migrations de base de donnees Alembic a jour (head).")
+        else:
+            # Fallback table creation if alembic.ini is missing
+            Base.metadata.create_all(bind=engine)
+            print("[WARN] alembic.ini non trouve, creation directe via Base.metadata.")
+    except Exception as e:
+        print(f"[ALEMBIC ERROR] Erreur lors des migrations : {e}")
+        log_error("Database", "Migrations", f"Erreur lors des migrations Alembic: {e}", e)
+        # Ensure base tables exist
+        try:
+            Base.metadata.create_all(bind=engine)
+        except Exception:
+            pass
 
-        # Cas B : Valeurs NULL sur projets existants
-        updates = [
-            "UPDATE projects SET status = 'reflexion' WHERE status IS NULL OR status = 'draft';",
-            "UPDATE projects SET status = 'fini' WHERE status = 'done';",
-            "UPDATE projects SET steps_json = '[]' WHERE steps_json IS NULL;",
-            "UPDATE projects SET estimated_cost = 0.0 WHERE estimated_cost IS NULL;",
-            "UPDATE projects SET actual_cost = 0.0 WHERE actual_cost IS NULL;",
-            "UPDATE projects SET estimated_hours = 0.0 WHERE estimated_hours IS NULL;",
-            "UPDATE projects SET actual_hours = 0.0 WHERE actual_hours IS NULL;"
-        ]
-        for query in updates:
-            try:
-                conn.execute(text(query))
-            except Exception as e:
-                pass
-        print("✅ Migration de rattrapage des données OK")
-except Exception as e:
-    print(f"[MIGRATION ERROR] Management Hub migration failed: {e}")
 
-# Migrations Système Tarifaire
-try:
-    from sqlalchemy import text
-    with engine.begin() as conn:
-        # -- Table tarification globale (singleton) --
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS tarification_globale (
-                id INTEGER PRIMARY KEY CHECK (id = 1),
-                taux_horaire REAL DEFAULT 35.0,
-                marge_defaut_pct REAL DEFAULT 30.0,
-                frais_generaux_pct REAL DEFAULT 10.0
-            )
-        """))
-        conn.execute(text("INSERT OR IGNORE INTO tarification_globale (id) VALUES (1)"))
-
-        # -- Colonnes prix par lot de stock (prix distinct du matériau) --
-        tarif_migrations = [
-            "ALTER TABLE stock ADD COLUMN prix_unitaire REAL DEFAULT 0.0",
-            "ALTER TABLE stock ADD COLUMN unite_prix TEXT DEFAULT 'm2'",
-            # Colonnes projets : marge spécifique et prix de vente manuel
-            "ALTER TABLE projects ADD COLUMN marge_pct REAL",
-            "ALTER TABLE projects ADD COLUMN prix_vente_manuel REAL",
-        ]
-        for query in tarif_migrations:
-            try:
-                conn.execute(text(query))
-                col = query.split('ADD COLUMN ')[-1].split(' ')[0]
-                print(f"✅ Migration tarifaire OK : {col}")
-            except Exception:
-                pass  # Colonne déjà existante
-
-        print("✅ Migrations tarifaires OK")
-except Exception as e:
-    print(f"[MIGRATION ERROR] Tarification migration failed: {e}")
-
+# Execute versioned migrations on initialization
+run_db_migrations()
 
 # Initialize FastAPI Application
 app = FastAPI(
     title="OptiCut Pro API",
     description="Système expert d'optimisation de menuiserie avec monitoring technique déporté.",
-    version="4.1.0"
+    version="4.2.0"
 )
 
-# CORS configuration for Frontend interaction
+# CORS configuration - Strict explicit origins
+cors_origins_env = os.getenv("CORS_ORIGINS")
+if cors_origins_env:
+    allow_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+else:
+    allow_origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Professional Monitoring Middleware
-# Intercepts every request and sends telemetry to the sidecar terminal
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -174,6 +117,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         status_code=422,
         content={"detail": safe_errors, "message": "Erreur de validation des données JSON (Backend)"}
     )
+
 
 @app.middleware("http")
 async def monitoring_middleware(request: Request, call_next):
@@ -201,53 +145,52 @@ async def monitoring_middleware(request: Request, call_next):
         
     return response
 
+
 # Static Files Serving (Cutting plans, PDFs, Labels)
 from .db.database import OPTIMIZATIONS_DIR
 app.mount("/api/files", StaticFiles(directory=str(OPTIMIZATIONS_DIR)), name="exports")
 
-# Plugin all functional modules (Routers)
-app.include_router(projects.router, prefix="/api/projects", tags=["Projets"])
-app.include_router(materials.router, prefix="/api/materials", tags=["Matériaux"])
-app.include_router(optimize.router, prefix="/api/optimize", tags=["Optimisation"])
-app.include_router(stock.router, prefix="/api/stock", tags=["Stock & Chutes"])
-app.include_router(clients.router, prefix="/api/clients", tags=["Clients"])
-app.include_router(suppliers.router, prefix="/api/suppliers", tags=["Fournisseurs"])
-app.include_router(hardware.router, prefix="/api/hardware", tags=["Quincaillerie"])
-app.include_router(ai.router, prefix="/api/ai", tags=["Intelligence Artificielle"])
-app.include_router(step_import.router, prefix="/api/step", tags=["Import STEP/3D"])
-app.include_router(stats.router, prefix="/api/stats", tags=["Statistiques"])
-app.include_router(backups.router, prefix="/api/backups", tags=["Sauvegardes"])
-app.include_router(qr.router, prefix="/api/qr", tags=["Codes QR"])
-app.include_router(quotes.router, prefix="/api/quotes", tags=["Devis"])
-app.include_router(scraping.router, prefix="/api/scraping", tags=["Web Scraping"])
-app.include_router(orders.router, prefix="/api/orders", tags=["Commandes"])
-app.include_router(templates.router, prefix="/api/templates", tags=["Modèles"])
-app.include_router(exports.router, prefix="/api/exports", tags=["Exports"])
-app.include_router(files.router, prefix="/api/file-explorer", tags=["Explorateur Fichiers"])
-app.include_router(management.router, prefix="/api/management", tags=["management"])
-app.include_router(settings.router, prefix="/api/settings", tags=["Paramètres"])
+# 1. Public Routers
 app.include_router(auth.router, prefix="/api", tags=["auth"])
-app.include_router(users.router, prefix="/api", tags=["users"])
+
+# 2. Protected Routers (Require valid JWT Bearer authentication)
+app.include_router(projects.router, prefix="/api/projects", tags=["Projets"], dependencies=[Depends(get_current_user)])
+app.include_router(materials.router, prefix="/api/materials", tags=["Matériaux"], dependencies=[Depends(get_current_user)])
+app.include_router(optimize.router, prefix="/api/optimize", tags=["Optimisation"], dependencies=[Depends(get_current_user)])
+app.include_router(stock.router, prefix="/api/stock", tags=["Stock & Chutes"], dependencies=[Depends(get_current_user)])
+app.include_router(clients.router, prefix="/api/clients", tags=["Clients"], dependencies=[Depends(get_current_user)])
+app.include_router(suppliers.router, prefix="/api/suppliers", tags=["Fournisseurs"], dependencies=[Depends(get_current_user)])
+app.include_router(hardware.router, prefix="/api/hardware", tags=["Quincaillerie"], dependencies=[Depends(get_current_user)])
+app.include_router(ai.router, prefix="/api/ai", tags=["Intelligence Artificielle"], dependencies=[Depends(get_current_user)])
+app.include_router(step_import.router, prefix="/api/step", tags=["Import STEP/3D"], dependencies=[Depends(get_current_user)])
+app.include_router(stats.router, prefix="/api/stats", tags=["Statistiques"], dependencies=[Depends(get_current_user)])
+app.include_router(backups.router, prefix="/api/backups", tags=["Sauvegardes"], dependencies=[Depends(get_current_user)])
+app.include_router(qr.router, prefix="/api/qr", tags=["Codes QR"], dependencies=[Depends(get_current_user)])
+app.include_router(quotes.router, prefix="/api/quotes", tags=["Devis"], dependencies=[Depends(get_current_user)])
+app.include_router(scraping.router, prefix="/api/scraping", tags=["Web Scraping"], dependencies=[Depends(get_current_user)])
+app.include_router(orders.router, prefix="/api/orders", tags=["Commandes"], dependencies=[Depends(get_current_user)])
+app.include_router(templates.router, prefix="/api/templates", tags=["Modèles"], dependencies=[Depends(get_current_user)])
+app.include_router(exports.router, prefix="/api/exports", tags=["Exports"], dependencies=[Depends(get_current_user)])
+app.include_router(files.router, prefix="/api/file-explorer", tags=["Explorateur Fichiers"], dependencies=[Depends(get_current_user)])
+app.include_router(management.router, prefix="/api/management", tags=["management"], dependencies=[Depends(get_current_user)])
+app.include_router(settings.router, prefix="/api/settings", tags=["Paramètres"], dependencies=[Depends(get_current_user)])
+app.include_router(users.router, prefix="/api", tags=["users"], dependencies=[Depends(get_current_user)])
+
 
 @app.on_event("startup")
 async def startup_event():
     """Triggered when the backend starts."""
-    import sys
     from .db.database import db_path
     
-    log_info("System", "Main", "🚀 OptiCut Pro Backend (V4.1) est opérationnel.")
+    log_info("System", "Main", "🚀 OptiCut Pro Backend (V4.2) est opérationnel.")
     log_info("System", "Database", f"SQLite Engine initialisé. Fichier utilisé : {db_path}")
-    
-    # --- DIAGNOSTIC ENVIRONNEMENT ---
-    log_info("Diagnostic", "Python", f"Executable: {sys.executable}")
-    log_info("Diagnostic", "Path", f"sys.path: {json.dumps(sys.path, indent=2)}")
     
     try:
         import shapely
         log_info("Diagnostic", "Dependencies", f"Shapely v{getattr(shapely, '__version__', 'unknown')} détecté avec succès.")
     except ImportError as e:
         log_error("Diagnostic", "Dependencies", f"ERREUR CRITIQUE: Shapely introuvable. Moteur 'Massif' indisponible. ({e})")
-    # --------------------------------
+
 
 @app.get("/api/health")
 def health_check():
@@ -255,8 +198,25 @@ def health_check():
     return {
         "status": "online", 
         "engine": "OptiCut Pro V4",
+        "cors_origins": allow_origins,
         "monitoring": "active (port 9999)"
     }
+
+
+@app.api_route("/api/shutdown", methods=["GET", "POST"])
+def api_shutdown(background_tasks: BackgroundTasks):
+    """
+    Clean shutdown endpoint triggered by STOP_OPTICUT.bat.
+    """
+    log_info("System", "Shutdown", "Arrêt demandé via /api/shutdown.")
+    
+    def delayed_exit():
+        time.sleep(1.0)
+        os._exit(0)
+        
+    background_tasks.add_task(delayed_exit)
+    return {"status": "shutting_down", "message": "Arrêt propre du serveur en cours..."}
+
 
 # Serve React Frontend
 frontend_dist = backend_dir.parent / "Frontend" / "dist"
@@ -267,6 +227,6 @@ else:
     def frontend_not_found():
         return {"error": "Frontend build not found. Please run 'npm run build' in the Frontend directory."}
 
+
 if __name__ == "__main__":
-    # Local execution support
     uvicorn.run(app, host="0.0.0.0", port=8000)
