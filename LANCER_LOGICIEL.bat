@@ -64,22 +64,23 @@ REM ============================================================================
 REM LANCEMENT SERVEUR DE LOGS (Sidecar)
 REM =============================================================================
 echo [0/3] Lancement du Serveur de Logs...
-start "OptiCut Logs" cmd /k "python "%PROJECT_DIR%Tools\log_server.py""
+powershell -NoProfile -Command "$proc = Start-Process cmd -ArgumentList '/k python \"%PROJECT_DIR%Tools\log_server.py\"' -PassThru; $proc.Id | Out-File -FilePath '%PROJECT_DIR%Moteur\UserData\opticut_logs.pid' -Encoding ascii"
 
 REM =============================================================================
 REM LANCEMENT BACKEND (Fenetre separee)
 REM =============================================================================
 echo [1/3] Lancement du Backend...
 
-REM On cree un mini-script temporaire pour lancer le backend proprement
-echo @echo off > run_backend.bat
-echo title OptiCut API Backend >> run_backend.bat
-echo call conda activate %CONDA_ENV% >> run_backend.bat
-echo echo Backend en cours d'execution... >> run_backend.bat
-echo uvicorn app.main:app --host 0.0.0.0 --port %BACKEND_PORT% --reload >> run_backend.bat
+REM On cree un mini-script pour lancer le backend proprement
+echo @echo off > "%PROJECT_DIR%run_backend.bat"
+echo title OptiCut API Backend >> "%PROJECT_DIR%run_backend.bat"
+echo call conda activate %CONDA_ENV% >> "%PROJECT_DIR%run_backend.bat"
+echo cd /d "%BACKEND_DIR%" >> "%PROJECT_DIR%run_backend.bat"
+echo echo Backend en cours d'execution... >> "%PROJECT_DIR%run_backend.bat"
+echo uvicorn app.main:app --host 0.0.0.0 --port %BACKEND_PORT% --reload >> "%PROJECT_DIR%run_backend.bat"
 
-REM Lance le script dans une nouvelle fenetre
-start "OptiCut Backend" cmd /c "cd /d "%BACKEND_DIR%" && "%PROJECT_DIR%run_backend.bat""
+REM Lance le backend et capture son PID
+powershell -NoProfile -Command "$proc = Start-Process cmd -ArgumentList '/k \"%PROJECT_DIR%run_backend.bat\"' -PassThru; $proc.Id | Out-File -FilePath '%PROJECT_DIR%Moteur\UserData\opticut_backend.pid' -Encoding ascii"
 
 REM Attendre un peu que le port s'ouvre
 timeout /t 4 /nobreak >nul
@@ -89,20 +90,16 @@ REM LANCEMENT FRONTEND (Fenetre separee)
 REM =============================================================================
 echo [2/3] Lancement du Frontend...
 
-echo @echo off > run_frontend.bat
-echo title OptiCut Interface >> run_frontend.bat
-echo cd /d "%FRONTEND_DIR%" >> run_frontend.bat
-echo echo Interface en cours d'execution... >> run_frontend.bat
-echo npm run dev >> run_frontend.bat
+echo @echo off > "%PROJECT_DIR%run_frontend.bat"
+echo title OptiCut Interface >> "%PROJECT_DIR%run_frontend.bat"
+echo cd /d "%FRONTEND_DIR%" >> "%PROJECT_DIR%run_frontend.bat"
+echo echo Interface en cours d'execution... >> "%PROJECT_DIR%run_frontend.bat"
+echo npm run dev >> "%PROJECT_DIR%run_frontend.bat"
 
-start "OptiCut Frontend" cmd /c "%PROJECT_DIR%run_frontend.bat"
+powershell -NoProfile -Command "$proc = Start-Process cmd -ArgumentList '/k \"%PROJECT_DIR%run_frontend.bat\"' -PassThru; $proc.Id | Out-File -FilePath '%PROJECT_DIR%Moteur\UserData\opticut_frontend.pid' -Encoding ascii"
 
 REM Attendre un peu
 timeout /t 4 /nobreak >nul
-
-REM Nettoyage des scripts temporaires (optionnel, on les garde pour debug si besoin)
-REM del run_backend.bat
-REM del run_frontend.bat
 
 REM =============================================================================
 REM OUVERTURE NAVIGATEUR

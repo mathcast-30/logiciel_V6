@@ -1,5 +1,40 @@
 # Structure de Base de Données Relationnelle - OptiCut Pro
 
+## ⚠️ Gestion des Migrations avec Alembic (Obligatoire)
+
+Toute modification de schéma de données (ajout de colonne, modification de type, nouvelle table ou contrainte) **doit obligatoirement faire l'objet d'une migration versionnée via Alembic**. Les requêtes manuelles `ALTER TABLE` ou `CREATE TABLE` au démarrage de l'application sont proscrites.
+
+### 1. Structure Alembic
+* **Fichier de configuration** : [`Moteur/Backend/System/Bin/alembic.ini`](file:///c:/Users/Mathe/Documents/Matheo/passion/logiciel/logiciel_V6/Moteur/Backend/System/Bin/alembic.ini)
+* **Scripts de versions** : [`Moteur/Backend/System/Bin/alembic/versions/`](file:///c:/Users/Mathe/Documents/Matheo/passion/logiciel/logiciel_V6/Moteur/Backend/System/Bin/alembic/versions/)
+* **Définition des modèles SQLAlchemy** : [`Moteur/Backend/System/Bin/app/models/__init__.py`](file:///c:/Users/Mathe/Documents/Matheo/passion/logiciel/logiciel_V6/Moteur/Backend/System/Bin/app/models/__init__.py)
+
+### 2. Commandes courantes
+
+Depuis le dossier `Moteur/Backend/System/Bin` (dans l'environnement Python activé) :
+
+```bash
+# 1. Générer une nouvelle migration automatique après modification des modèles
+python -m alembic revision --autogenerate -m "description_du_changement"
+
+# 2. Appliquer les migrations en attente sur la base active
+python -m alembic upgrade head
+
+# 3. Voir la révision actuellement appliquée
+python -m alembic current
+
+# 4. Historique des migrations
+python -m alembic history --verbose
+
+# 5. Annuler la dernière migration (Rollback)
+python -m alembic downgrade -1
+```
+
+### 3. Exécution automatique au démarrage
+Au lancement du backend FastAPI (`app.main`), la fonction `run_db_migrations()` applique automatiquement `alembic upgrade head` afin de garantir que la base de données est toujours alignée avec la dernière révision.
+
+---
+
 ## Schéma Complet SQL
 
 Voici le schéma SQL complet montrant toutes les relations Client → Projet → Modèle 3D → Pièces.

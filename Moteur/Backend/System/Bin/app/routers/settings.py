@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -8,9 +10,9 @@ router = APIRouter()
 
 
 class TarificationUpdate(BaseModel):
-    taux_horaire: float | None = None
-    marge_defaut_pct: float | None = None
-    frais_generaux_pct: float | None = None
+    taux_horaire: Optional[float] = None
+    marge_defaut_pct: Optional[float] = None
+    frais_generaux_pct: Optional[float] = None
 
 
 @router.get("/tarification")

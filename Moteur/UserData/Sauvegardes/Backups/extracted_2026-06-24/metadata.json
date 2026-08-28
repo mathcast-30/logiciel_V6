@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "created_at": "2026-06-24T23:00:00.067989",
+  "type": "manual",
+  "notes": "Sauvegarde manuelle via API",
+  "original_filename": "backup_2026-06-24_22-59.zip",
+  "system_info": {
+    "platform": "nt"
+  },
+  "db_hash": "a846e89f06a7db55905b9032b4f31571ed10f788e35063c8e5d0c751ac96ac9f"
+}

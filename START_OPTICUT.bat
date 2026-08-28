@@ -12,10 +12,10 @@ CALL "%CONDA_BAT%" base
 
 echo ETAPE 3 - Lancement du Backend
 SET "UVICORN=C:\Users\Mathe\anaconda3\Scripts\uvicorn.exe"
-start "OptiCut - Backend" /D "%BACKEND_DIR%" cmd /k "%UVICORN% app.main:app --host 127.0.0.1 --port 8000"
+powershell -NoProfile -Command "$proc = Start-Process cmd -ArgumentList '/k cd /d \"%BACKEND_DIR%\" ^& \"%UVICORN%\" app.main:app --host 127.0.0.1 --port 8000' -PassThru; $proc.Id | Out-File -FilePath '%~dp0Moteur\UserData\opticut_backend.pid' -Encoding ascii"
 
 echo ETAPE 4 - Lancement du Frontend
-start "OptiCut - Frontend" /D "%FRONTEND_DIR%" cmd /k "npm run dev -- --host 127.0.0.1"
+powershell -NoProfile -Command "$proc = Start-Process cmd -ArgumentList '/k cd /d \"%FRONTEND_DIR%\" ^& npm run dev -- --host 127.0.0.1' -PassThru; $proc.Id | Out-File -FilePath '%~dp0Moteur\UserData\opticut_frontend.pid' -Encoding ascii"
 
 echo ETAPE 5 - Attente de 8 secondes
 timeout /t 8 /nobreak

@@ -9,6 +9,17 @@ const api = axios.create({
     timeout: 5000, // 5 Secondes max avant d'abandonner
 });
 
+// Intercepteur pour injecter automatiquement le token d'authentification
+api.interceptors.request.use((config) => {
+    const token = sessionStorage.getItem('opticut_session_token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+}, (error) => {
+    return Promise.reject(error);
+});
+
 // Intercepteur pour gérer les pannes
 api.interceptors.response.use(
     (response) => response,
