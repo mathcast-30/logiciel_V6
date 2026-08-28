@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional, Union
+from pydantic import BaseModel
 from app.db.database import get_db
 from app.models import Project as ProjectModel, Part as PartModel
 from app.schemas import Project, ProjectCreate, Part, PartCreate
