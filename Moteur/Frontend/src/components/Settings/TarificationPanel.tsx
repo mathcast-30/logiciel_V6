@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Euro, Percent, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
+import api from '../../services/api';
 
 interface TarificationData {
   taux_horaire: number;
@@ -20,16 +21,14 @@ export const TarificationPanel: React.FC = () => {
   useEffect(() => {
     const fetchTarification = async () => {
       try {
-        const res = await fetch('http://localhost:8000/api/settings/tarification');
-        if (res.ok) {
-          const json = await res.json();
-          setData({
-            taux_horaire: json.taux_horaire ?? 35.0,
-            marge_defaut_pct: json.marge_defaut_pct ?? 30.0,
-            frais_generaux_pct: json.frais_generaux_pct ?? 10.0
-          });
-        }
-      } catch (e) {
+        const res = await api.get('settings/tarification');
+        const json = res.data;
+        setData({
+          taux_horaire: json.taux_horaire ?? 35.0,
+          marge_defaut_pct: json.marge_defaut_pct ?? 30.0,
+          frais_generaux_pct: json.frais_generaux_pct ?? 10.0
+        });
+      } catch {
         toast.error('Erreur lors du chargement de la tarification');
       } finally {
         setLoading(false);
@@ -41,23 +40,14 @@ export const TarificationPanel: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch('http://localhost:8000/api/settings/tarification', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          taux_horaire: parseFloat(data.taux_horaire.toString()),
-          marge_defaut_pct: parseFloat(data.marge_defaut_pct.toString()),
-          frais_generaux_pct: parseFloat(data.frais_generaux_pct.toString())
-        })
+      await api.patch('settings/tarification', {
+        taux_horaire: parseFloat(data.taux_horaire.toString()),
+        marge_defaut_pct: parseFloat(data.marge_defaut_pct.toString()),
+        frais_generaux_pct: parseFloat(data.frais_generaux_pct.toString())
       });
-
-      if (res.ok) {
-        toast.success('Paramètres tarifaires sauvegardés avec succès');
-      } else {
-        toast.error('Erreur lors de la sauvegarde');
-      }
-    } catch (e) {
-      toast.error('Erreur réseau lors de la sauvegarde');
+      toast.success('Paramètres tarifaires sauvegardés avec succès');
+    } catch {
+      toast.error('Erreur lors de la sauvegarde');
     } finally {
       setSaving(false);
     }
