@@ -1,5 +1,7 @@
 @echo off 
 title OptiCut Interface 
-cd /d "%~dp0Moteur\Frontend" 
-echo Interface en cours d'execution... 
+cd /d "C:\Users\Mathe\Documents\Matheo\passion\logiciel\logiciel_V6\Moteur\Frontend" 
+echo ============================================================ 
+echo   OPTICUT PRO - INTERFACE UTILISATEUR 
+echo ============================================================ 
 npm run dev 

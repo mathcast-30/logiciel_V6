@@ -1,5 +1,7 @@
 @echo off 
 title OptiCut API Backend 
-call conda activate opticut_pro 
-echo Backend en cours d'execution... 
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload 
+cd /d "C:\Users\Mathe\Documents\Matheo\passion\logiciel\logiciel_V6\Moteur\Backend\System\Bin" 
+echo ============================================================ 
+echo   OPTICUT PRO - API BACKEND (Port 8000) 
+echo ============================================================ 
+"C:\Users\Mathe\anaconda3\envs\opticut_pro\python.exe" -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 
