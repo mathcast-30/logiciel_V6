@@ -70,12 +70,16 @@ app = FastAPI(
     version="4.2.0"
 )
 
-# CORS configuration - Strict explicit origins
+# CORS configuration
+# En mode .exe : le frontend est servi par uvicorn sur le port 8000 lui-même.
+# Les origines dev (5173, 3000) sont conservées pour ne pas casser le workflow de développement.
 cors_origins_env = os.getenv("CORS_ORIGINS")
 if cors_origins_env:
     allow_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
 else:
     allow_origins = [
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
@@ -181,7 +185,16 @@ async def startup_event():
 
     log_info("System", "Main", "🚀 OptiCut Pro Backend (V4.2) est opérationnel.")
     log_info("System", "Database", f"SQLite Engine initialisé. Fichier utilisé : {db_path}")
-    
+
+    # Ouvrir le navigateur automatiquement uniquement en mode exécutable packagé
+    if getattr(sys, 'frozen', False):
+        import threading, webbrowser
+        def _open_browser():
+            import time
+            time.sleep(1.5)  # Laisser uvicorn démarrer
+            webbrowser.open('http://localhost:8000')
+        threading.Thread(target=_open_browser, daemon=True).start()
+
     try:
         import shapely
         log_info("Diagnostic", "Dependencies", f"Shapely v{getattr(shapely, '__version__', 'unknown')} détecté avec succès.")
@@ -216,7 +229,13 @@ def api_shutdown(background_tasks: BackgroundTasks):
 
 
 # Serve React Frontend
-frontend_dist = backend_dir.parent / "Frontend" / "dist"
+# En mode .exe : le dist est empaqueté dans sys._MEIPASS/frontend_dist/
+# En mode dév   : le dist est dans Moteur/Frontend/dist/ (généré par npm run build)
+if getattr(sys, 'frozen', False):
+    frontend_dist = Path(sys._MEIPASS) / 'frontend_dist'  # type: ignore[attr-defined]
+else:
+    frontend_dist = backend_dir.parent / 'Frontend' / 'dist'
+
 if frontend_dist.exists() and frontend_dist.is_dir():
     app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
 else:

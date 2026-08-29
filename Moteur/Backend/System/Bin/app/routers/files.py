@@ -11,6 +11,8 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
+from app.core.config import get_data_dir
+
 from app.db.database import get_db, OPTIMIZATIONS_DIR
 from app.models import (
     Client as ClientModel,
@@ -23,10 +25,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # --- Path discovery ---
-base_engine_path = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
-user_data_root = base_engine_path / "UserData"
-optimizations_dir = user_data_root / "Optimisations"
-exports_dir = user_data_root / "Exports"
+# Utilise get_data_dir() : Moteur/UserData en dév, %APPDATA%/OptiCutPro en .exe
+_data_root = get_data_dir()
+user_data_root = _data_root
+optimizations_dir = _data_root / 'Optimisations'
+exports_dir = _data_root / 'Exports'
 
 
 def _sanitize(name: str) -> str:

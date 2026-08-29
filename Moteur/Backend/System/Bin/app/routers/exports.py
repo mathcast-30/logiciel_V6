@@ -14,16 +14,13 @@ from IA_Engine.project_exports import ProjectExportGenerator
 router = APIRouter()
 
 from pathlib import Path
+from app.core.config import get_data_dir
 
-# Professional Data Pathing
-# Tree: Moteur/Backend/System/Bin/app/routers/exports.py
-# Parents: 1:routers, 2:app, 3:Bin, 4:System, 5:Backend, 6:Moteur
-# Professional UserData Pathing
-# Tree: Moteur/Backend/System/Bin/app/routers/exports.py
-# Parents: 1:routers, 2:app, 3:Bin, 4:System, 5:Backend, 6:Moteur
-base_engine_path = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
-user_data_root = base_engine_path / "UserData"
+# Répertoire de données utilisateur (dev : Moteur/UserData, exe : %APPDATA%/OptiCutPro)
+user_data_root = get_data_dir()
 user_data_root.mkdir(parents=True, exist_ok=True)
+export_dir = user_data_root / 'Exports'
+export_dir.mkdir(parents=True, exist_ok=True)
 
 # Initialize generators with the new UserData root
 export_generator = ExportGenerator(output_dir=str(user_data_root))
