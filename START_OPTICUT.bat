@@ -1,26 +1,85 @@
 @echo off
-title Lancement OptiCut Pro V6
+REM =============================================================================
+REM OPTICUT PRO - LANCEUR RAPIDE
+REM =============================================================================
+title OptiCut Pro - Demarrage...
 
-echo ETAPE 1 - Definition des dossiers
-SET "BACKEND_DIR=%~dp0Moteur\Backend\System\Bin"
-SET "FRONTEND_DIR=%~dp0Moteur\Frontend"
+SET "PROJECT_DIR=%~dp0"
+SET "BACKEND_DIR=%PROJECT_DIR%Moteur\Backend\System\Bin"
+SET "FRONTEND_DIR=%PROJECT_DIR%Moteur\Frontend"
+SET "USERDATA_DIR=%PROJECT_DIR%Moteur\UserData"
+SET "LOG_FILE=%USERDATA_DIR%\last_launch_error.log"
 
-echo ETAPE 2 - Configuration de Conda
-REM Uvicorn de l'env opticut_pro (pas de l'env base)
-SET "UVICORN=C:\Users\Mathe\anaconda3\envs\opticut_pro\Scripts\uvicorn.exe"
-IF NOT EXIST "%UVICORN%" SET "UVICORN=C:\ProgramData\anaconda3\envs\opticut_pro\Scripts\uvicorn.exe"
+REM Initialisation du dossier UserData et du fichier de log
+if not exist "%USERDATA_DIR%" mkdir "%USERDATA_DIR%"
+echo [%DATE% %TIME%] === Lancement via START_OPTICUT.bat === > "%LOG_FILE%"
 
-echo ETAPE 3 - Lancement du Backend
-REM CWD = Bin/ (obligatoire pour les imports relatifs app.main:app)
-powershell -NoProfile -Command "$proc = Start-Process cmd -ArgumentList '/k title OptiCut API Backend ^& cd /d \"%BACKEND_DIR%\" ^& \"%UVICORN%\" app.main:app --host 127.0.0.1 --port 8000' -PassThru; $proc.Id | Out-File -FilePath '%~dp0Moteur\UserData\opticut_backend.pid' -Encoding ascii"
+echo.
+echo ============================================================
+echo          OPTICUT PRO - DEMARRAGE DU SYSTEME
+echo ============================================================
+echo.
 
-echo ETAPE 4 - Lancement du Frontend
-powershell -NoProfile -Command "$proc = Start-Process cmd -ArgumentList '/k title OptiCut Interface ^& cd /d \"%FRONTEND_DIR%\" ^& npm run dev -- --host 127.0.0.1' -PassThru; $proc.Id | Out-File -FilePath '%~dp0Moteur\UserData\opticut_frontend.pid' -Encoding ascii"
+REM 1. Verification de l'interpreteur Python de l'environnement
+SET "PYTHON_EXE=C:\Users\Mathe\anaconda3\envs\opticut_pro\python.exe"
+if not exist "%PYTHON_EXE%" (
+    echo [ERREUR CRITIQUE] L'interpreteur Python est introuvable : >> "%LOG_FILE%"
+    echo %PYTHON_EXE% >> "%LOG_FILE%"
+    echo [ERREUR CRITIQUE] L'interpreteur Python specifique est introuvable :
+    echo %PYTHON_EXE%
+    echo.
+    echo Veuillez verifier que l'environnement conda opticut_pro est bien installe.
+    pause
+    exit /b 1
+)
 
-echo ETAPE 5 - Attente de 8 secondes
-timeout /t 8 /nobreak
+REM 2. Verification de Node.js pour le frontend
+where node >nul 2>&1
+if %ERRORLEVEL% neq 0 (
+    echo [ERREUR CRITIQUE] Node.js n'est pas installe ou n'est pas dans le PATH. >> "%LOG_FILE%"
+    echo [ERREUR CRITIQUE] Node.js est introuvable.
+    echo Le frontend ne peut pas demarrer sans Node.js.
+    pause
+    exit /b 1
+)
 
-echo ETAPE 6 - Ouverture du navigateur
+echo [OK] Environnement verifie avec succes.
+echo [1/3] Demarrage du Backend FastAPI...
+echo [INFO] Lancement du backend avec %PYTHON_EXE% >> "%LOG_FILE%"
+
+REM Creation de scripts de lancement independants
+echo @echo off > "%PROJECT_DIR%run_backend.bat"
+echo title OptiCut API Backend >> "%PROJECT_DIR%run_backend.bat"
+echo cd /d "%BACKEND_DIR%" >> "%PROJECT_DIR%run_backend.bat"
+echo echo ============================================================ >> "%PROJECT_DIR%run_backend.bat"
+echo echo   OPTICUT PRO - API BACKEND (Port 8000) >> "%PROJECT_DIR%run_backend.bat"
+echo echo ============================================================ >> "%PROJECT_DIR%run_backend.bat"
+echo "%PYTHON_EXE%" -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 >> "%PROJECT_DIR%run_backend.bat"
+
+start "OptiCut API Backend" cmd /k "%PROJECT_DIR%run_backend.bat"
+
+echo [2/3] Demarrage du Frontend React...
+echo [INFO] Lancement du frontend npm run dev >> "%LOG_FILE%"
+
+echo @echo off > "%PROJECT_DIR%run_frontend.bat"
+echo title OptiCut Interface >> "%PROJECT_DIR%run_frontend.bat"
+echo cd /d "%FRONTEND_DIR%" >> "%PROJECT_DIR%run_frontend.bat"
+echo echo ============================================================ >> "%PROJECT_DIR%run_frontend.bat"
+echo echo   OPTICUT PRO - INTERFACE UTILISATEUR >> "%PROJECT_DIR%run_frontend.bat"
+echo echo ============================================================ >> "%PROJECT_DIR%run_frontend.bat"
+echo npm run dev >> "%PROJECT_DIR%run_frontend.bat"
+
+start "OptiCut Interface" cmd /k "%PROJECT_DIR%run_frontend.bat"
+
+echo [3/3] Attente et ouverture du navigateur...
+timeout /t 6 /nobreak >nul
+
 start http://127.0.0.1:5173
 
+echo.
+echo ============================================================
+echo [OK] OPTICUT PRO EST EN COURS D'EXECUTION !
+echo ============================================================
+echo.
 pause
+
