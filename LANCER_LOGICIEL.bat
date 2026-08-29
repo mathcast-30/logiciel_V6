@@ -1,125 +1,96 @@
 @echo off
 REM =============================================================================
-REM OPTICUT PRO - LANCEUR FINAL
+REM OPTICUT PRO - LANCEUR PRINCIPAL
 REM =============================================================================
-REM Ce script lance le Backend et le Frontend dans des fenetres separees.
-REM =============================================================================
+title OptiCut Pro - Demarrage...
 
-title OptiCut Pro - Initialisation...
+SET "PROJECT_DIR=%~dp0"
+SET "BACKEND_DIR=%PROJECT_DIR%Moteur\Backend\System\Bin"
+SET "FRONTEND_DIR=%PROJECT_DIR%Moteur\Frontend"
+SET "USERDATA_DIR=%PROJECT_DIR%Moteur\UserData"
+SET "LOG_FILE=%USERDATA_DIR%\last_launch_error.log"
+
+REM Initialisation du dossier UserData et du fichier de log
+if not exist "%USERDATA_DIR%" mkdir "%USERDATA_DIR%"
+echo [%DATE% %TIME%] === Tentative de lancement OptiCut Pro === > "%LOG_FILE%"
 
 echo.
 echo ============================================================
-echo       OPTICUT PRO - DEMARRAGE
+echo          OPTICUT PRO - DEMARRAGE DU SYSTEME
 echo ============================================================
 echo.
 
-SET CONDA_ENV=opticut_pro
-SET PROJECT_DIR=%~dp0
-SET BACKEND_DIR=%PROJECT_DIR%Moteur\Backend\System\Bin
-SET FRONTEND_DIR=%PROJECT_DIR%Moteur\Frontend
-SET BACKEND_PORT=8000
-SET FRONTEND_PORT=5173
+REM 1. Verification de l'interpreteur Python de l'environnement
+SET "PYTHON_EXE=C:\Users\Mathe\anaconda3\envs\opticut_pro\python.exe"
+if not exist "%PYTHON_EXE%" (
+    echo [ERREUR CRITIQUE] L'interpreteur Python est introuvable : >> "%LOG_FILE%"
+    echo %PYTHON_EXE% >> "%LOG_FILE%"
+    echo [ERREUR CRITIQUE] L'interpreteur Python specifique est introuvable :
+    echo %PYTHON_EXE%
+    echo.
+    echo Veuillez verifier que l'environnement conda opticut_pro est bien installe.
+    pause
+    exit /b 1
+)
 
-REM =============================================================================
-REM CHECK 1: NODE.JS
-REM =============================================================================
+REM 2. Verification de Node.js pour le frontend
 where node >nul 2>&1
-IF ERRORLEVEL 1 (
-    echo [ERREUR] Node.js n'est pas installe !
-    echo Le logiciel ne peut pas demarrer sans Node.js.
-    echo.
-    echo 1. Telechargez-le ici: https://nodejs.org/
-    echo 2. Installez-le
-    echo 3. Redemarrez votre ordinateur
-    echo.
+if %ERRORLEVEL% neq 0 (
+    echo [ERREUR CRITIQUE] Node.js n'est pas installe ou n'est pas dans le PATH. >> "%LOG_FILE%"
+    echo [ERREUR CRITIQUE] Node.js est introuvable.
+    echo Le frontend ne peut pas demarrer sans Node.js.
     pause
     exit /b 1
 )
 
-REM =============================================================================
-REM CHECK 2: ANACONDA
-REM =============================================================================
-where conda >nul 2>&1
-IF ERRORLEVEL 1 (
-    echo [ERREUR] Veuillez lancer ce script via "Anaconda Prompt"
-    pause
-    exit /b 1
-)
-
-echo [OK] Environnement systeme verifie
-echo.
-
-REM =============================================================================
-REM INSTALLATION AUTO (Si necessaire)
-REM =============================================================================
-IF NOT EXIST "%FRONTEND_DIR%\node_modules" (
-    echo [INFO] Premier lancement detecte: Installation du Frontend...
+REM 3. Verification des dependances frontend
+if not exist "%FRONTEND_DIR%\node_modules" (
+    echo [INFO] Premier lancement : installation des modules frontend...
+    echo [INFO] Premier lancement : npm install >> "%LOG_FILE%"
     cd /d "%FRONTEND_DIR%"
-    call npm install
-    echo [OK] Frontend installe
-    echo.
+    call npm install >> "%LOG_FILE%" 2>&1
 )
 
-REM =============================================================================
-REM LANCEMENT SERVEUR DE LOGS (Sidecar)
-REM =============================================================================
-echo [0/3] Lancement du Serveur de Logs...
-powershell -NoProfile -Command "$proc = Start-Process cmd -ArgumentList '/k python \"%PROJECT_DIR%Tools\log_server.py\"' -PassThru; $proc.Id | Out-File -FilePath '%PROJECT_DIR%Moteur\UserData\opticut_logs.pid' -Encoding ascii"
+echo [OK] Environnement verifie avec succes.
+echo [1/3] Demarrage du Backend FastAPI...
+echo [INFO] Lancement du backend avec %PYTHON_EXE% >> "%LOG_FILE%"
 
-REM =============================================================================
-REM LANCEMENT BACKEND (Fenetre separee)
-REM =============================================================================
-echo [1/3] Lancement du Backend...
-
-REM Chemin absolu vers uvicorn de l'env opticut_pro (independant du PATH systeme)
-SET "OPTICUT_UVICORN=C:\Users\Mathe\anaconda3\envs\opticut_pro\Scripts\uvicorn.exe"
-IF NOT EXIST "%OPTICUT_UVICORN%" SET "OPTICUT_UVICORN=C:\ProgramData\anaconda3\envs\opticut_pro\Scripts\uvicorn.exe"
-
-REM CWD = Bin/ OBLIGATOIRE (imports relatifs app.main:app)
+REM Creation de scripts de lancement independants et propres (evite les soucis d'echappement &)
 echo @echo off > "%PROJECT_DIR%run_backend.bat"
 echo title OptiCut API Backend >> "%PROJECT_DIR%run_backend.bat"
-echo call conda activate %CONDA_ENV% >> "%PROJECT_DIR%run_backend.bat"
 echo cd /d "%BACKEND_DIR%" >> "%PROJECT_DIR%run_backend.bat"
-echo echo Backend en cours d'execution... >> "%PROJECT_DIR%run_backend.bat"
-echo "%OPTICUT_UVICORN%" app.main:app --host 0.0.0.0 --port %BACKEND_PORT% --reload >> "%PROJECT_DIR%run_backend.bat"
+echo echo ============================================================ >> "%PROJECT_DIR%run_backend.bat"
+echo echo   OPTICUT PRO - API BACKEND (Port 8000) >> "%PROJECT_DIR%run_backend.bat"
+echo echo ============================================================ >> "%PROJECT_DIR%run_backend.bat"
+echo "%PYTHON_EXE%" -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 >> "%PROJECT_DIR%run_backend.bat"
 
-REM Lance le backend et capture son PID
-powershell -NoProfile -Command "$proc = Start-Process cmd -ArgumentList '/k \"%PROJECT_DIR%run_backend.bat\"' -PassThru; $proc.Id | Out-File -FilePath '%PROJECT_DIR%Moteur\UserData\opticut_backend.pid' -Encoding ascii"
+start "OptiCut API Backend" cmd /k "%PROJECT_DIR%run_backend.bat"
 
-REM Attendre un peu que le port s'ouvre
-timeout /t 4 /nobreak >nul
-
-REM =============================================================================
-REM LANCEMENT FRONTEND (Fenetre separee)
-REM =============================================================================
-echo [2/3] Lancement du Frontend...
+echo [2/3] Demarrage du Frontend React...
+echo [INFO] Lancement du frontend npm run dev >> "%LOG_FILE%"
 
 echo @echo off > "%PROJECT_DIR%run_frontend.bat"
 echo title OptiCut Interface >> "%PROJECT_DIR%run_frontend.bat"
 echo cd /d "%FRONTEND_DIR%" >> "%PROJECT_DIR%run_frontend.bat"
-echo echo Interface en cours d'execution... >> "%PROJECT_DIR%run_frontend.bat"
+echo echo ============================================================ >> "%PROJECT_DIR%run_frontend.bat"
+echo echo   OPTICUT PRO - INTERFACE UTILISATEUR >> "%PROJECT_DIR%run_frontend.bat"
+echo echo ============================================================ >> "%PROJECT_DIR%run_frontend.bat"
 echo npm run dev >> "%PROJECT_DIR%run_frontend.bat"
 
-powershell -NoProfile -Command "$proc = Start-Process cmd -ArgumentList '/k \"%PROJECT_DIR%run_frontend.bat\"' -PassThru; $proc.Id | Out-File -FilePath '%PROJECT_DIR%Moteur\UserData\opticut_frontend.pid' -Encoding ascii"
+start "OptiCut Interface" cmd /k "%PROJECT_DIR%run_frontend.bat"
 
-REM Attendre un peu
-timeout /t 4 /nobreak >nul
+echo [3/3] Attente et ouverture du navigateur...
+timeout /t 6 /nobreak >nul
 
-REM =============================================================================
-REM OUVERTURE NAVIGATEUR
-REM =============================================================================
-echo [3/3] Ouverture du navigateur...
+start http://localhost:5173
+
 echo.
-
-start http://localhost:%FRONTEND_PORT%
-
 echo ============================================================
-echo    LOGICIEL LANCE !
+echo [OK] OPTICUT PRO EST EN COURS D'EXECUTION !
 echo ============================================================
 echo.
-echo Si l'interface ne s'ouvre pas, allez sur:
-echo http://localhost:%FRONTEND_PORT%
-echo.
-echo Ne fermez pas les 2 autres fenetres noires qui se sont ouvertes.
+echo Vous pouvez fermer cette fenetre une fois le logiciel ouvert.
+echo Laissez ouvertes les fenetres du Backend et de l'Interface.
 echo.
 pause
+
