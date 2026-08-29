@@ -8,6 +8,14 @@ import sys
 import os
 from pathlib import Path
 
+# Fix PyInstaller --windowed mode stdout/stderr standard stream handling:
+# En mode windowed (GUI sans console), sys.stdout et sys.stderr valent None,
+# ce qui fait planter Uvicorn ColourizedFormatter (AttributeError: 'NoneType' object has no attribute 'isatty').
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w", encoding="utf-8")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w", encoding="utf-8")
+
 # En mode .exe : ajouter le répertoire des sources extractées au sys.path
 # afin que les imports comme `from app.xxx import ...` fonctionnent.
 if getattr(sys, 'frozen', False):
@@ -27,4 +35,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         log_level="info",
+        use_colors=False,
     )
