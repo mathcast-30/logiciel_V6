@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { ManagedProject, PlanningStep, DEFAULT_STEP_COLORS } from '../../../config/managementConfig';
 import { Flag, Save, Plus, Trash2, X, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface PlanningGanttProps {
   projects: ManagedProject[];

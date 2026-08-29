@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Warehouse, Tag, Truck } from 'lucide-react';
 
 import { useStockData } from '../hooks/useStockData';

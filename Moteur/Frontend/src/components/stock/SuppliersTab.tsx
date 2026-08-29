@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Truck, ExternalLink, RefreshCw, Trash2, Edit, CheckCircle, Database, Search, Upload, Plus, Globe, Download, X, Package, AlertCircle, Filter, Link as LinkIcon, Layers, Check } from 'lucide-react';
+import { Truck, ExternalLink, RefreshCw, Trash2, Edit, Database, Search, Upload, Plus, Globe, Download, X, Package, AlertCircle, Filter, Link as LinkIcon, Layers, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { SupplierService, type Supplier, type SupplierMaterial, type ScrapedProduct, type ScrapingResult } from '../../services/supplierService';
 import { type MaterialWithStock } from '../../services/materialService';
@@ -37,7 +37,6 @@ export function SuppliersTab({
     onOpenMaterialModal
 }: SuppliersTabProps) {
     const [searchTerm, setSearchTerm] = useState('');
-    const [expandedSupplier, setExpandedSupplier] = useState<number | null>(null);
 
     // Supplier form state
     const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
@@ -66,7 +65,6 @@ export function SuppliersTab({
     
     // Association & Product edit state
     const [isAssociationModalOpen, setIsAssociationModalOpen] = useState(false);
-    const [isProductEditModalOpen, setIsProductEditModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<SupplierMaterial | ScrapedProduct | null>(null);
     const [targetMaterialId, setTargetMaterialId] = useState<number | null>(null);
 
@@ -223,7 +221,7 @@ export function SuppliersTab({
             await SupplierService.analyzeUrlStream(
                 scrapingUrl,
                 maxPages,
-                (message, progress) => {
+                (message: string, progress?: number) => {
                     if (isMountedRef.current) {
                         setScrapingMessage(message);
                         if (progressBarRef.current && progress !== undefined) {
@@ -231,7 +229,7 @@ export function SuppliersTab({
                         }
                     }
                 },
-                (result) => {
+                (result: ScrapingResult) => {
                     if (isMountedRef.current) {
                         setScrapingResult(result);
                         setIsScraping(false);
@@ -248,27 +246,30 @@ export function SuppliersTab({
 
     const handleUpdateScrapedProduct = (index: number, updates: Partial<ScrapedProduct>) => {
         if (!scrapingResult) return;
-        const newProducts = [...scrapingResult.products];
+        const productsList = scrapingResult.products || scrapingResult.analyzed_products || [];
+        const newProducts = [...productsList];
         newProducts[index] = { ...newProducts[index], ...updates };
         setScrapingResult({ ...scrapingResult, products: newProducts });
     };
 
     const handleRemoveScrapedProduct = (urlToRemove: string) => {
         if (!scrapingResult) return;
-        setScrapingResult(prev => {
+        setScrapingResult((prev: ScrapingResult | null) => {
             if (!prev) return prev;
+            const productsList = prev.products || prev.analyzed_products || [];
             return {
                 ...prev,
-                products: prev.products.filter(p => p.url !== urlToRemove)
+                products: productsList.filter((p: ScrapedProduct) => p.url !== urlToRemove)
             };
         });
     };
 
     const handleImportAll = async () => {
         if (!scrapingResult || !selectedSupplier) return;
+        const productsList = scrapingResult.products || scrapingResult.analyzed_products || [];
         try {
             let importedCount = 0;
-            for (const prod of scrapingResult.products) {
+            for (const prod of productsList) {
                 if (!prod.price) continue;
                 try {
                     await SupplierService.addMaterial(selectedSupplier.id, {
@@ -524,7 +525,7 @@ export function SuppliersTab({
                                     </div>
 
                                     <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {scrapingResult.products.map((prod, idx) => (
+                                        {(scrapingResult.products || []).map((prod: ScrapedProduct, idx: number) => (
                                             <div key={prod.url || `scraped-${idx}`} className="border border-slate-200 rounded-lg p-3 hover:border-blue-300 hover:shadow-md transition bg-white flex flex-col gap-2 group relative">
                                                 <button onClick={() => handleRemoveScrapedProduct(prod.url)} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full shadow-lg z-30 transition-all transform hover:scale-110 active:scale-90" title="Supprimer ce produit">
                                                     <X className="h-4 w-4 stroke-[3px]" />

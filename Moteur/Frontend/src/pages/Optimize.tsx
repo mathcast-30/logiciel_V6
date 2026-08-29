@@ -2,36 +2,21 @@ import { useState, useEffect, useRef } from 'react';
 import {
     Scissors,
     Sparkles,
-    Loader2,
-    Layout,
-    Save,
-    Trash2,
-    RefreshCw,
-    Search,
-    ChevronDown,
-    Plus,
-    Box,
     Printer,
     Download,
     Settings,
-    Maximize2,
-    FileText,
-    History,
-    Filter,
-    ArrowUpRight,
-    Info,
-    Square,
-    BarChart3
+    BarChart3,
+    AlertCircle
 } from 'lucide-react';
 import {
-    ChevronLeft, ChevronRight, AlertTriangle,
-    CheckCircle2, Wrench, Rocket, Package
+    AlertTriangle,
+    Wrench, Rocket, Package
 } from '../components/Optimize/Icons';
 import { toast } from 'sonner';
 import api from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { type Project, ProjectService } from '../services/projectService';
-import { type OptimizationResponse, type PanelResult, type OptimizationRequest, OptimizeService, type RawWoodParams } from '../services/optimizeService';
+import { type OptimizationResponse, type OptimizationRequest, OptimizeService, type RawWoodParams } from '../services/optimizeService';
 import { ExportService } from '../services/exportService';
 import { AIService, type GAParameters } from '../services/aiService';
 import { HardwareService } from '../services/hardwareService';
@@ -40,7 +25,6 @@ import {
     PieceSelector,
     StockSelector,
     RawWoodConfigPanel,
-    PolygonViewer,
     EnhancedProjectSelector,
     MaterialBreakdown,
     MaterialSourceSelector,
@@ -57,8 +41,6 @@ export function Optimize() {
     const [isOptimizing, setIsOptimizing] = useState(false);
     const [result, setResult] = useState<OptimizationResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [currentPanelIndex, setCurrentPanelIndex] = useState(0);
-    const [currentMaterial, setCurrentMaterial] = useState<string | null>(null);
     const [aiStrategy, setAiStrategy] = useState<{ strategy_report: string, ga_parameters: GAParameters } | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -90,8 +72,6 @@ export function Optimize() {
     // Stock confirmation modal
     const [showStockConfirmation, setShowStockConfirmation] = useState(false);
     const [pendingOptimization, setPendingOptimization] = useState(false);
-    const [isValidating, setIsValidating] = useState(false);
-    const [isValidated, setIsValidated] = useState(false);
 
     // Settings
     const [settings, setSettings] = useState({
@@ -383,14 +363,8 @@ export function Optimize() {
             // 4. Injecter le nouveau résultat proprement
             setResult(response);
             // ─────────────────────────────────────────────────────────────────
-            setIsValidated(false);
 
             if (response.success) {
-                const materials = Object.keys(response.result_data || {});
-                if (materials.length > 0) {
-                    setCurrentMaterial(materials[0]);
-                    setCurrentPanelIndex(0);
-                }
                 toast.success('Optimisation terminée avec succès');
             } else {
                 // Keep the result for ResultVisualizer to show the specific error
@@ -443,22 +417,6 @@ export function Optimize() {
         }
     };
 
-    const handleValidate = async () => {
-        if (!result?.optimization_id) return;
-        setIsValidating(true);
-        try {
-            await OptimizeService.validate(result.optimization_id);
-            setIsValidated(true);
-            toast.success("Optimisation lancée en production !");
-            // Reload projects to see status update
-            loadProjects();
-        } catch {
-            toast.error("Erreur lors de la validation");
-        } finally {
-            setIsValidating(false);
-        }
-    };
-
     const handlePrintLabels = async () => {
         if (selectedProjectIds.length === 0) return;
         try {
@@ -482,13 +440,6 @@ export function Optimize() {
             const historicalResult = await OptimizeService.getResult(optimizationId);
             setResult(historicalResult);
             setSelectedHistoryId(optimizationId);
-
-            // Set up material and panel display
-            const materials = Object.keys(historicalResult.result_data);
-            if (materials.length > 0) {
-                setCurrentMaterial(materials[0]);
-                setCurrentPanelIndex(0);
-            }
         } catch {
             toast.error('Erreur lors du chargement de l\'optimisation');
         } finally {
@@ -546,20 +497,6 @@ export function Optimize() {
             toast.error("Erreur lors du calcul de quincaillerie");
         } finally {
             setIsCalculatingHardware(false);
-        }
-    };
-
-    const getCurrentPanels = (): PanelResult[] => {
-        if (!result || !currentMaterial) return [];
-        return result.result_data[currentMaterial]?.panels || [];
-    };
-
-    const navigatePanel = (direction: 'prev' | 'next') => {
-        const panels = getCurrentPanels();
-        if (direction === 'prev' && currentPanelIndex > 0) {
-            setCurrentPanelIndex(currentPanelIndex - 1);
-        } else if (direction === 'next' && currentPanelIndex < panels.length - 1) {
-            setCurrentPanelIndex(currentPanelIndex + 1);
         }
     };
 
@@ -1153,160 +1090,6 @@ export function Optimize() {
                     )}
                 </>
             )}
-        </div>
-    );
-}
-
-function CuttingPlanViewer({ panel }: { panel: PanelResult }) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [scale, setScale] = useState(1);
-
-    useEffect(() => {
-        if (containerRef.current) {
-            const containerWidth = containerRef.current.clientWidth;
-            const containerHeight = 450;
-            const scaleX = (containerWidth - 20) / panel.width;
-            const scaleY = (containerHeight - 20) / panel.height;
-            setScale(Math.min(scaleX, scaleY, 0.45));
-        }
-    }, [panel]);
-
-    const COLORS = [
-        '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
-        '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1'
-    ];
-
-    const uniqueProjectIds = Array.from(new Set(panel.placements.map(p => p.project_id || 0)));
-    const projectPalette: Record<number, string> = {};
-    uniqueProjectIds.forEach((id, i) => projectPalette[id] = COLORS[i % COLORS.length]);
-
-    return (
-        <div ref={containerRef} className="space-y-6">
-            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-6 flex flex-col items-center">
-                <svg width={panel.width * scale} height={panel.height * scale} className="drop-shadow-sm overflow-visible">
-                    <defs>
-                        <pattern id="grain-horizontal" width="40" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(0)">
-                            <line x1="0" y1="1" x2="40" y2="1" stroke="#000" strokeWidth="0.5" opacity="0.1" />
-                            <line x1="0" y1="3" x2="40" y2="3" stroke="#000" strokeWidth="0.5" opacity="0.05" />
-                        </pattern>
-                        <pattern id="grain-vertical" width="4" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(0)">
-                            <line x1="1" y1="0" x2="1" y2="40" stroke="#000" strokeWidth="0.5" opacity="0.1" />
-                            <line x1="3" y1="0" x2="3" y2="40" stroke="#000" strokeWidth="0.5" opacity="0.05" />
-                        </pattern>
-                    </defs>
-
-                    {/* Background with Panel Grain */}
-                    <rect width={panel.width * scale} height={panel.height * scale} fill="white" stroke="#CBD5E1" strokeWidth={1} rx={4} />
-                    <rect
-                        width={panel.width * scale}
-                        height={panel.height * scale}
-                        fill={panel.grain_direction === 1 ? "url(#grain-horizontal)" : panel.grain_direction === 2 ? "url(#grain-vertical)" : "none"}
-                        rx={4}
-                    />
-
-                    {/* Pieces */}
-                    {panel.placements.map((p, i) => (
-                        <g key={i}>
-                            <rect
-                                x={p.x * scale} y={p.y * scale}
-                                width={p.width * scale} height={p.height * scale}
-                                fill={projectPalette[p.project_id || 0]}
-                                stroke="#1E293B" strokeWidth={1} rx={2} opacity={0.85}
-                            />
-                            <rect
-                                x={p.x * scale} y={p.y * scale}
-                                width={p.width * scale} height={p.height * scale}
-                                fill={p.grain_direction === 1 ? "url(#grain-horizontal)" : p.grain_direction === 2 ? "url(#grain-vertical)" : "none"}
-                                rx={2}
-                                opacity={0.3}
-                            />
-                            {p.width * scale > 30 && p.height * scale > 15 && (
-                                <text
-                                    x={(p.x + p.width / 2) * scale} y={(p.y + p.height / 2) * scale}
-                                    textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={10} fontWeight="bold"
-                                    className="pointer-events-none drop-shadow-sm"
-                                    paintOrder="stroke"
-                                    stroke="rgba(0,0,0,0.5)"
-                                    strokeWidth="1px"
-                                >
-                                    #{i + 1}
-                                </text>
-                            )}
-                        </g>
-                    ))}
-
-                    {/* Offcuts */}
-                    {panel.offcuts.map((o, i) => (
-                        <rect
-                            key={i} x={o.x * scale} y={o.y * scale}
-                            width={o.width * scale} height={o.height * scale}
-                            fill="#FEF3C7" stroke="#D97706" strokeWidth={1} strokeDasharray="4" rx={2} opacity={0.6}
-                        />
-                    ))}
-                </svg>
-
-                <div className="mt-8 flex flex-wrap justify-center gap-6">
-                    <div className="flex gap-4 border-r dark:border-slate-700 pr-6 mr-2">
-                        <div className="flex items-center gap-2">
-                            <svg className="w-4 h-4 border border-slate-300 rounded bg-slate-100 overflow-hidden">
-                                <rect width="16" height="16" fill="url(#grain-horizontal)" />
-                            </svg>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase">Fil Horiz.</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <svg className="w-4 h-4 border border-slate-300 rounded bg-slate-100 overflow-hidden">
-                                <rect width="16" height="16" fill="url(#grain-vertical)" />
-                            </svg>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase">Fil Vert.</span>
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {uniqueProjectIds.map(id => {
-                            const name = panel.placements.find(p => p.project_id === id)?.project_name || "Commun";
-                            return (
-                                <div key={id} className="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-full shadow-sm border dark:border-slate-700">
-                                    <svg className="w-3 h-3">
-                                        <circle cx="6" cy="6" r="6" fill={projectPalette[id]} />
-                                    </svg>
-                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{name}</span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
-
-            <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                    <thead>
-                        <tr className="text-[10px] uppercase text-slate-400 font-bold border-b dark:border-slate-700">
-                            <th className="pb-2">#</th>
-                            <th className="pb-2">Piece / Projet</th>
-                            <th className="pb-2">Dim (mm)</th>
-                            <th className="pb-2 text-right">Ori.</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y dark:divide-slate-700">
-                        {panel.placements.map((p, i) => (
-                            <tr key={i} className="text-sm">
-                                <td className="py-2.5 font-bold">#{i + 1}</td>
-                                <td className="py-2.5">
-                                    <div className="font-bold">{p.piece_name}</div>
-                                    <div className="text-[10px] text-slate-400 font-medium italic">{p.project_name}</div>
-                                </td>
-                                <td className="py-2.5 font-mono text-[10px]">
-                                    {p.longueur && p.largeur ? (
-                                        `${p.longueur} x ${p.largeur}${p.epaisseur ? ` x ${p.epaisseur}` : ''}`
-                                    ) : (
-                                        `${p.width} x ${p.height}`
-                                    )}
-                                </td>
-                                <td className="py-2.5 text-right text-xs">{p.rotated ? 'Rot' : 'Std'}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
         </div>
     );
 }

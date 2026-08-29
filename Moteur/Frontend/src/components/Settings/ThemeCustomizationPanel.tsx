@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useRef, type FC } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { THEME_PRESETS } from '../../config/themePresets';
 import { THEME_COLORS } from '../../config/themeConfig';
@@ -7,7 +7,7 @@ import { ColorSwatch } from './ColorSwatch';
 import { ThemePreview } from './ThemePreview';
 
 // Icons
-const Sliders: React.FC<{size?: number; className?: string}> = ({ size = 24, className = '' }) => (
+const Sliders: FC<{size?: number; className?: string}> = ({ size = 24, className = '' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <line x1="4" y1="21" x2="4" y2="14" />
     <line x1="4" y1="10" x2="4" y2="3" />
@@ -21,7 +21,7 @@ const Sliders: React.FC<{size?: number; className?: string}> = ({ size = 24, cla
   </svg>
 );
 
-const RefreshCcw: React.FC<{size?: number; className?: string}> = ({ size = 24, className = '' }) => (
+const RefreshCcw: FC<{size?: number; className?: string}> = ({ size = 24, className = '' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <polyline points="1 4 1 10 7 10" />
     <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
