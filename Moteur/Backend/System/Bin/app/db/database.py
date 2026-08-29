@@ -1,70 +1,73 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+"""
+Initialisation SQLAlchemy — OptiCut Pro.
+
+Utilise get_data_dir() (app/core/config.py) pour tous les chemins persistants,
+ce qui garantit le bon fonctionnement en mode développement ET en mode .exe PyInstaller.
+"""
+from __future__ import annotations
+import logging
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-# Professional Data Pathing - ENGINE 
-current_path = Path(__file__).resolve()
-# Robustly find 'Moteur' anchor
-try:
-    moteur_index = current_path.parts.index("Moteur")
-    base_engine_dir = Path(*current_path.parts[:moteur_index+1])
-except ValueError:
-    # Fallback if folder structure is weird
-    base_engine_dir = current_path.parent.parent.parent.parent.parent.parent 
+# --- 1. Charger la configuration persistante en PREMIER ---
+# Cela doit se faire avant toute utilisation de os.getenv() liée à l'app.
+from ..core.config import ensure_env_file, get_data_dir
 
-# Load .env at the project root (parent of Moteur)
-project_root = base_engine_dir.parent
-env_path = project_root / ".env"
+env_path = ensure_env_file()
 load_dotenv(dotenv_path=env_path)
 
-db_dir = base_engine_dir / "UserData" / "BaseDeDonnees"
-optim_dir = base_engine_dir / "UserData" / "Optimisations"
+# --- 2. Résoudre les chemins de données ---
+data_dir = get_data_dir()
+
+db_dir    = data_dir / 'BaseDeDonnees'
+optim_dir = data_dir / 'Optimisations'
 db_dir.mkdir(parents=True, exist_ok=True)
 optim_dir.mkdir(parents=True, exist_ok=True)
 
-# Determine DB path: env variable DB_PATH takes precedence
-db_path_env = os.getenv("DB_PATH")
+# DB_PATH dans .env prend le dessus (cas migrations manuelles / tests)
+db_path_env = os.getenv('DB_PATH')
 if db_path_env:
     db_path = Path(db_path_env).resolve()
     db_path.parent.mkdir(parents=True, exist_ok=True)
 else:
-    db_path = db_dir / "opticut.db"
+    db_path = db_dir / 'opticut.db'
 
 OPTIMIZATIONS_DIR = optim_dir
 
-# SQLite database file
-print(f"[DATABASE] Using file: {db_path}")
-print(f"[STORAGE] Optimizations directory: {OPTIMIZATIONS_DIR}")
+# --- 3. Initialiser SQLAlchemy ---
+print(f"[DATABASE] Fichier utilisé : {db_path}")
+print(f"[STORAGE]  Optimisations  : {OPTIMIZATIONS_DIR}")
+
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{db_path}"
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, 
-    connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 class Base(DeclarativeBase):
-    """Base class for SQLAlchemy models."""
+    """Classe de base pour tous les modèles SQLAlchemy."""
     pass
 
-# Dependency for getting database session
-import logging
 
+# --- 4. Dépendance FastAPI ---
 logger = logging.getLogger(__name__)
+
 
 def get_db():
     """
-    Yields a database session (standard FastAPI pattern).
-    The session is automatically closed when the request ends.
+    Fournit une session DB pour chaque requête (pattern FastAPI standard).
+    La session est automatiquement fermée en fin de requête.
     """
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-

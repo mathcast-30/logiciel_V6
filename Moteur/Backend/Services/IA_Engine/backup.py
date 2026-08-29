@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 import shutil
+import sys
 import json
 import hashlib
 import zipfile
@@ -24,23 +25,32 @@ class BackupManager:
 
     def __init__(self) -> None:
         # Configuration des chemins robustes
-        current_path = Path(__file__).resolve()
-        try:
-            moteur_index = current_path.parts.index("Moteur")
-            base_engine_dir = Path(*current_path.parts[:moteur_index+1])
-        except ValueError:
-            base_engine_dir = current_path.parent.parent.parent.parent.parent
+        if getattr(sys, 'frozen', False):
+            # Exécutable PyInstaller : données persistantes dans %APPDATA%
+            appdata = Path(os.environ.get('APPDATA', str(Path.home() / 'AppData' / 'Roaming')))
+            base_engine_dir = appdata / 'OptiCutPro'
+        else:
+            # Développement : trouver le dossier Moteur par traversal
+            current_path = Path(__file__).resolve()
+            try:
+                moteur_index = current_path.parts.index('Moteur')
+                base_engine_dir = Path(*current_path.parts[:moteur_index + 1])
+            except ValueError:
+                base_engine_dir = current_path.parent.parent.parent.parent.parent
 
-        self.base_dir = base_engine_dir / "UserData"
-        self.db_path = self.base_dir / "BaseDeDonnees" / "opticut.db"
-        self.documents_path = self.base_dir / "Documents"
-        self.backup_dir = self.base_dir / "Sauvegardes" / "Backups"
-        self.temp_dir = self.backup_dir / ".temp"
+            # En dév, les données sont dans Moteur/UserData
+            base_engine_dir = base_engine_dir / 'UserData'
+
+        self.base_dir = base_engine_dir
+        self.db_path = self.base_dir / 'BaseDeDonnees' / 'opticut.db'
+        self.documents_path = self.base_dir / 'Documents'
+        self.backup_dir = self.base_dir / 'Sauvegardes' / 'Backups'
+        self.temp_dir = self.backup_dir / '.temp'
 
         # Création des dossiers nécessaires
         self.backup_dir.mkdir(parents=True, exist_ok=True)
         if self.temp_dir.exists():
-             shutil.rmtree(self.temp_dir)
+            shutil.rmtree(self.temp_dir)
         self.temp_dir.mkdir(exist_ok=True)
 
     def _get_iso_timestamp(self) -> str:

@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.database import get_db
+from app.core.config import get_data_dir
 from app.models import Material, Part, Project, StepModel
 
 # Import OCC availability flags alongside the extractor
@@ -25,9 +26,8 @@ from IA_Engine.step_parser import OCC_AVAILABLE, OCC_IMPORT_ERROR, OCC_VERSION, 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Storage directory
-BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
-UPLOAD_DIR = BASE_DIR / "UserData" / "StepFiles"
+# Répertoire de stockage des fichiers STEP uploadés
+UPLOAD_DIR = get_data_dir() / 'StepFiles'
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
