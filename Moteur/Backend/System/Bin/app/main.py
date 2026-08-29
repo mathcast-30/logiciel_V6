@@ -39,36 +39,29 @@ from .monitoring_client import log_info, log_error
 
 def run_db_migrations():
     """
-    Run Alembic database migrations programmatically on startup.
-    Ensures all tables and schema changes are versioned and up-to-date.
+    Ensure database tables exist on startup.
+    
+    Alembic `upgrade head` is intentionally NOT called here — it blocks the
+    server startup on SQLite (batch_alter_table locks the DB for every boot).
+    
+    Run migrations manually when needed:
+        cd Moteur/Backend/System/Bin
+        alembic upgrade head
+    
+    On first-ever run (empty DB), create_all handles table creation as fallback.
     """
     try:
-        from alembic.config import Config
-        from alembic import command
-        
-        alembic_ini_path = bin_dir / "alembic.ini"
-        if alembic_ini_path.exists():
-            alembic_cfg = Config(str(alembic_ini_path))
-            alembic_cfg.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
-            command.upgrade(alembic_cfg, "head")
-            print("[OK] Migrations Alembic appliquees avec succes (head).")
-            log_info("Database", "Migrations", "Migrations de base de donnees Alembic a jour (head).")
-        else:
-            # Fallback table creation if alembic.ini is missing
-            Base.metadata.create_all(bind=engine)
-            print("[WARN] alembic.ini non trouve, creation directe via Base.metadata.")
+        # Fast, non-blocking: only creates tables that don't exist yet
+        Base.metadata.create_all(bind=engine)
+        print("[OK] Tables DB verifiees/creees via SQLAlchemy.")
     except Exception as e:
-        print(f"[ALEMBIC ERROR] Erreur lors des migrations : {e}")
-        log_error("Database", "Migrations", f"Erreur lors des migrations Alembic: {e}", e)
-        # Ensure base tables exist
-        try:
-            Base.metadata.create_all(bind=engine)
-        except Exception:
-            pass
+        print(f"[DB ERROR] Impossible de verifier/creer les tables : {e}")
+        log_error("Database", "Startup", f"Erreur initialisation tables: {e}", e)
 
 
-# Execute versioned migrations on initialization
-run_db_migrations()
+
+# NOTE: run_db_migrations() is called in startup_event() below,
+# not at module-level, to avoid SQLite connection conflicts during import.
 
 # Initialize FastAPI Application
 app = FastAPI(
@@ -181,7 +174,11 @@ app.include_router(users.router, prefix="/api", tags=["users"], dependencies=[De
 async def startup_event():
     """Triggered when the backend starts."""
     from .db.database import db_path
-    
+
+    # Run Alembic migrations here (not at module-level) to avoid SQLite
+    # connection conflicts: the app engine is fully ready at this point.
+    run_db_migrations()
+
     log_info("System", "Main", "🚀 OptiCut Pro Backend (V4.2) est opérationnel.")
     log_info("System", "Database", f"SQLite Engine initialisé. Fichier utilisé : {db_path}")
     

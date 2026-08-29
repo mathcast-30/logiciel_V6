@@ -71,13 +71,17 @@ REM LANCEMENT BACKEND (Fenetre separee)
 REM =============================================================================
 echo [1/3] Lancement du Backend...
 
-REM On cree un mini-script pour lancer le backend proprement
+REM Chemin absolu vers uvicorn de l'env opticut_pro (independant du PATH systeme)
+SET "OPTICUT_UVICORN=C:\Users\Mathe\anaconda3\envs\opticut_pro\Scripts\uvicorn.exe"
+IF NOT EXIST "%OPTICUT_UVICORN%" SET "OPTICUT_UVICORN=C:\ProgramData\anaconda3\envs\opticut_pro\Scripts\uvicorn.exe"
+
+REM CWD = Bin/ OBLIGATOIRE (imports relatifs app.main:app)
 echo @echo off > "%PROJECT_DIR%run_backend.bat"
 echo title OptiCut API Backend >> "%PROJECT_DIR%run_backend.bat"
 echo call conda activate %CONDA_ENV% >> "%PROJECT_DIR%run_backend.bat"
 echo cd /d "%BACKEND_DIR%" >> "%PROJECT_DIR%run_backend.bat"
 echo echo Backend en cours d'execution... >> "%PROJECT_DIR%run_backend.bat"
-echo uvicorn app.main:app --host 0.0.0.0 --port %BACKEND_PORT% --reload >> "%PROJECT_DIR%run_backend.bat"
+echo "%OPTICUT_UVICORN%" app.main:app --host 0.0.0.0 --port %BACKEND_PORT% --reload >> "%PROJECT_DIR%run_backend.bat"
 
 REM Lance le backend et capture son PID
 powershell -NoProfile -Command "$proc = Start-Process cmd -ArgumentList '/k \"%PROJECT_DIR%run_backend.bat\"' -PassThru; $proc.Id | Out-File -FilePath '%PROJECT_DIR%Moteur\UserData\opticut_backend.pid' -Encoding ascii"
