@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Plus, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import api from '../../../services/api';
 
-interface StockItem {
+export interface StockItem {
   id: number;
   material_id: number;
   material_name: string;
+  material_species: string | null;
   thickness: number;
   is_panel: boolean;
-  quantity: number;
   width: number;
   height: number;
-  label?: string;
-  prix_unitaire?: number;
-  unite_prix?: string;
+  quantity: number;
+  is_offcut: boolean;
+  grain_direction: number;
+  has_defects: boolean;
+  label: string | null;
+  quality_score: number;
+  prix_unitaire: number | null;
+  unite_prix: string;
 }
 
 export const StockView: React.FC = () => {
@@ -26,11 +32,9 @@ export const StockView: React.FC = () => {
   const fetchStock = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/stock');
-      if (res.ok) {
-        setStock(await res.json());
-      }
-    } catch (e) {
+      const res = await api.get('stock');
+      setStock(res.data);
+    } catch {
       toast.error('Erreur lors du chargement des stocks');
     } finally {
       setLoading(false);
@@ -49,26 +53,16 @@ export const StockView: React.FC = () => {
         return;
       }
 
-      const res = await fetch(`http://localhost:8000/api/stock/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          prix_unitaire: prix,
-          unite_prix: editUnite
-        })
+      await api.patch(`stock/${id}`, {
+        prix_unitaire: prix,
+        unite_prix: editUnite
       });
 
-      if (res.ok) {
-        toast.success('Prix mis à jour');
-        setStock(prev => prev.map(item => item.id === id ? { ...item, prix_unitaire: prix, unite_prix: editUnite } : item));
-        setEditingId(null);
-      } else {
-        toast.error('Erreur lors de la mise à jour');
-      }
+      toast.success('Prix mis à jour');
+      setStock(prev => prev.map(item => item.id === id ? { ...item, prix_unitaire: prix, unite_prix: editUnite } : item));
+      setEditingId(null);
     } catch (e) {
-      toast.error('Erreur réseau');
+      toast.error('Erreur lors de la mise à jour');
     }
   };
 

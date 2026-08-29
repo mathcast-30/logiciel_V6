@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, KanbanSquare, CalendarDays, BarChart3, Clock, Package } from 'lucide-react';
 import { MANAGEMENT_TABS, ManagedProject, ProjectStatus, PlanningStep } from '../../config/managementConfig';
 import { toast } from 'sonner';
+import api from '../../services/api';
 
 import { Overview } from './tabs/Overview';
 import { KanbanView } from './tabs/KanbanView';
@@ -46,22 +47,22 @@ export const Management: React.FC = () => {
     setLoading(true);
     try {
       const results = await Promise.allSettled([
-        fetch('http://localhost:8000/api/management/overview'),
-        fetch('http://localhost:8000/api/management/planning'),
-        fetch('http://localhost:8000/api/management/analytics')
+        api.get('management/overview'),
+        api.get('management/planning'),
+        api.get('management/analytics')
       ]);
 
-      if (results[0].status === 'fulfilled' && results[0].value.ok) {
-        setOverview(await results[0].value.json());
+      if (results[0].status === 'fulfilled') {
+        setOverview(results[0].value.data);
       }
       
-      if (results[1].status === 'fulfilled' && results[1].value.ok) {
-        const plData = await results[1].value.json();
+      if (results[1].status === 'fulfilled') {
+        const plData = results[1].value.data;
         setProjects(plData.projects || []);
       }
       
-      if (results[2].status === 'fulfilled' && results[2].value.ok) {
-        setAnalytics(await results[2].value.json());
+      if (results[2].status === 'fulfilled') {
+        setAnalytics(results[2].value.data);
       }
 
     } catch (error) {
@@ -81,14 +82,7 @@ export const Management: React.FC = () => {
     setProjects(prev => prev.map(p => p.id === id ? { ...p, status } : p));
     
     try {
-      const res = await fetch(`http://localhost:8000/api/projects/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-      if (!res.ok) {
-        throw new Error('Failed to update status');
-      }
+      await api.patch(`projects/${id}/status`, { status });
       toast.success('Statut mis à jour');
     } catch (e) {
       toast.error('Erreur lors de la mise à jour du statut');
@@ -111,14 +105,7 @@ export const Management: React.FC = () => {
     }));
 
     try {
-      const res = await fetch(`http://localhost:8000/api/projects/${id}/planning`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (!res.ok) {
-        throw new Error('Failed to update planning');
-      }
+      await api.patch(`projects/${id}/planning`, data);
       toast.success('Planning mis à jour');
     } catch (e) {
       toast.error('Erreur lors de la mise à jour du planning');
@@ -140,12 +127,7 @@ export const Management: React.FC = () => {
     }));
 
     try {
-      const res = await fetch(`http://localhost:8000/api/projects/${id}/tarification`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (!res.ok) throw new Error('Failed to update tarification');
+      await api.patch(`projects/${id}/tarification`, data);
       toast.success('Tarification mise à jour');
     } catch (e) {
       toast.error('Erreur lors de la mise à jour de la tarification');
