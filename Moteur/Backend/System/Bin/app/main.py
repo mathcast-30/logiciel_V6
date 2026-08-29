@@ -147,6 +147,11 @@ async def monitoring_middleware(request: Request, call_next):
 from .db.database import OPTIMIZATIONS_DIR
 app.mount("/api/files", StaticFiles(directory=str(OPTIMIZATIONS_DIR)), name="exports")
 
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok"}
+
+
 # 1. Public Routers
 app.include_router(auth.router, prefix="/api", tags=["auth"])
 
