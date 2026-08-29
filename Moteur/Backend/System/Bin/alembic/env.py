@@ -1,7 +1,7 @@
 from logging.config import fileConfig
 import sys
 from pathlib import Path
-from sqlalchemy import pool
+from sqlalchemy import create_engine, pool
 from alembic import context
 
 # Ensure bin directory is in sys.path
@@ -9,7 +9,7 @@ bin_dir = Path(__file__).resolve().parent.parent
 if str(bin_dir) not in sys.path:
     sys.path.insert(0, str(bin_dir))
 
-from app.db.database import Base, SQLALCHEMY_DATABASE_URL, engine
+from app.db.database import Base, SQLALCHEMY_DATABASE_URL
 import app.models  # Ensures all models are registered in Base.metadata
 
 # this is the Alembic Config object, which provides
@@ -40,8 +40,15 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
-    connectable = engine
+    """Run migrations in 'online' mode.
+    
+    Uses a dedicated NullPool engine (one connection per operation, immediately
+    closed) to avoid sharing connections with the FastAPI app engine — which
+    would cause SQLite to deadlock when upgrade() is called at startup.
+    """
+    # Dedicated engine for Alembic: NullPool = no persistent connections
+    url = config.get_main_option("sqlalchemy.url") or SQLALCHEMY_DATABASE_URL
+    connectable = create_engine(url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
         context.configure(
@@ -52,6 +59,8 @@ def run_migrations_online() -> None:
 
         with context.begin_transaction():
             context.run_migrations()
+
+    connectable.dispose()
 
 
 if context.is_offline_mode():
