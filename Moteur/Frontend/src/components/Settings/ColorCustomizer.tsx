@@ -63,7 +63,7 @@ const Upload: React.FC<IconProps> = ({ size = 24, className = '' }) => (
 );
 
 export function ColorCustomizer() {
-    const { colors, setColor, setColors, resetColors, theme, exportTheme, importTheme } = useTheme();
+    const { colors, setColor, setColors, resetColors, exportTheme, importTheme } = useTheme();
     const [copied, setCopied] = useState<string | null>(null);
     const [showPresets, setShowPresets] = useState(true);
     const [importError, setImportError] = useState<string | null>(null);

@@ -7,7 +7,8 @@
 import { Settings, Sliders } from 'lucide-react';
 import { useState } from 'react';
 
-import { RawWoodParams } from '../../services/optimizeService';
+import { type RawWoodParams } from '../../services/optimizeService';
+export type { RawWoodParams };
 
 interface RawWoodConfigPanelProps {
     params: RawWoodParams;

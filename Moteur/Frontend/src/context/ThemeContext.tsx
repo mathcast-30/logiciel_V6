@@ -4,8 +4,15 @@ import { THEME_COLORS, DEFAULT_THEME_DARK, DEFAULT_THEME_LIGHT } from '../config
 const LS_MODE_KEY    = 'opticut_theme_mode';
 const LS_COLORS_KEY  = 'opticut_theme_colors';
 
-type ColorMap = Record<string, string>;
-export type ThemeMode = 'dark' | 'light' | 'system';
+/** A map of CSS variable keys to hex color values. */
+export type ColorPalette = Record<string, string>;
+
+/** @deprecated Use ThemeMode. Kept for backward compatibility with existing imports. */
+export type Theme = 'dark' | 'light' | 'system';
+
+export type ThemeMode = Theme;
+
+type ColorMap = ColorPalette;
 
 interface ThemeContextType {
   mode: ThemeMode;

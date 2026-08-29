@@ -100,7 +100,7 @@ export interface OptimizationResponse {
     remaining_pieces?: { id: number; name: string }[];
     fallback_used?: boolean;
     optimizer_type?: string;
-    metrics?: Record<string, number | string>;
+    metrics?: { execution_time_ms?: number; [key: string]: number | string | undefined };
 }
 
 export const OptimizeService = {

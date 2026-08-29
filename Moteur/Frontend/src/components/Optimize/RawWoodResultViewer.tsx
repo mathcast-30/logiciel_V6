@@ -43,7 +43,7 @@ interface RawPanel {
     defects?: [number, number][][];
 }
 
-interface RawWoodResult {
+export interface RawWoodResult {
     success: boolean;
     panels_used: number;
     total_pieces: number;

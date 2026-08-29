@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, KeyRound, Power, PowerOff, Loader2, AlertCircle, Copy, CheckCircle2, RefreshCcw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Edit2, KeyRound, Power, PowerOff, Loader2, AlertCircle, Copy, RefreshCcw } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
 import { useAuth } from '../../context/AuthContext';
 

@@ -1,10 +1,73 @@
 import { AlertCircle, CheckCircle2, FileText, Download, AlertTriangle } from 'lucide-react';
 import { PolygonViewer } from './PolygonViewer';
-import { RawWoodResultViewer } from './RawWoodResultViewer';
+import { RawWoodResultViewer, type RawWoodResult } from './RawWoodResultViewer';
 import { memo } from 'react';
 
+interface VisualizerPiece {
+    id?: number | string;
+    piece_id?: number | string;
+    name?: string;
+    piece_name?: string;
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    polygon?: Array<{ x: number; y: number }>;
+    rotation?: number;
+    rotation_degrees?: number;
+    grain_direction?: number;
+    rotated?: boolean;
+}
+
+interface VisualizerPanel {
+    id?: number | string;
+    panel_id?: number | string;
+    board_id?: number | string;
+    width?: number;
+    height?: number;
+    used_area?: number;
+    placed_pieces?: VisualizerPiece[];
+    placements?: VisualizerPiece[];
+}
+
+interface VisualizerMaterialGroup {
+    boards?: VisualizerPanel[];
+    sheets?: VisualizerPanel[];
+    panels?: VisualizerPanel[];
+}
+
+export interface ResultDataPayload {
+    optimization_id?: number;
+    engine_used?: 'panel' | 'raw_wood' | string;
+    total_panels_used?: number;
+    waste_percentage?: number;
+    result_data?: Record<string, VisualizerMaterialGroup>;
+    export_files?: Record<string, string>;
+    error?: string;
+    error_code?: string;
+    success?: boolean;
+    panels?: VisualizerPanel[];
+    pieces_placed?: number;
+    total_pieces?: number;
+    pieces_remaining?: number;
+    remaining_pieces?: { id: number; name: string }[];
+    piece_name?: string;
+    max_stock_w?: number;
+    max_stock_h?: number;
+    optimizer_type?: string;
+    engine?: string;
+    fallback_used?: boolean;
+    metrics?: { execution_time_ms?: number };
+    boards?: VisualizerPanel[];
+    sheets?: VisualizerPanel[];
+    results?: Record<string, VisualizerMaterialGroup>;
+    panels_used?: number;
+    algorithm?: string;
+    status?: string;
+}
+
 interface ResultVisualizerProps {
-    result: any;
+    result: ResultDataPayload | null | undefined;
     isOptimizing: boolean;
     onDownloadPack?: (format: string) => void;
     optimizationId?: number;
@@ -75,12 +138,12 @@ export const ResultVisualizer = memo(function ResultVisualizer({
     }
 
     // Mapping des données (Engine-Agnostic)
-    const activeResults = data?.boards || data?.sheets || data?.panels || [];
+    const activeResults: VisualizerPanel[] = data?.boards || data?.sheets || data?.panels || [];
 
     // Normalisation des résultats
     const normalizedResults = {
         ...data,
-        panels: activeResults?.map((item: any) => ({
+        panels: activeResults?.map((item: VisualizerPanel) => ({
             ...item,
             id: item?.id || item?.panel_id || item?.board_id,
             // Normalisation des placements
@@ -98,8 +161,8 @@ export const ResultVisualizer = memo(function ResultVisualizer({
             <div>
                 <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
                     Optimisation partielle —{' '}
-                    {data?.pieces_remaining > 0
-                        ? `${data.pieces_remaining} pièce${data.pieces_remaining > 1 ? 's' : ''} non-placée${data.pieces_remaining > 1 ? 's' : ''}`
+                    {(data?.pieces_remaining ?? 0) > 0
+                        ? `${data.pieces_remaining} pièce${(data?.pieces_remaining ?? 0) > 1 ? 's' : ''} non-placée${(data?.pieces_remaining ?? 0) > 1 ? 's' : ''}`
                         : data?.error || 'Certaines contraintes n\'ont pas pu être respectées.'
                     }
                 </p>
@@ -126,11 +189,38 @@ export const ResultVisualizer = memo(function ResultVisualizer({
 
         const stableKey = data?.optimization_id || optimizationId || `raw-${data?.metrics?.execution_time_ms || 'fallback'}`;
 
+        const rawWoodResultData: RawWoodResult = {
+            success: Boolean(data?.success),
+            panels_used: Number(data?.panels_used ?? normalizedResults.panels.length),
+            total_pieces: Number(data?.total_pieces ?? 0),
+            pieces_placed: Number(data?.pieces_placed ?? 0),
+            pieces_remaining: Number(data?.pieces_remaining ?? 0),
+            waste_percentage: Number(data?.waste_percentage ?? 0),
+            panels: normalizedResults.panels.map((p, idx) => ({
+                panel_id: Number(p.id ?? p.panel_id ?? idx + 1),
+                width: Number(p.width ?? 0),
+                height: Number(p.height ?? 0),
+                placements: (p.placements || []).map((pl, plIdx) => ({
+                    piece_id: Number(pl.id ?? pl.piece_id ?? plIdx + 1),
+                    piece_name: String(pl.piece_name || pl.name || `Pièce ${plIdx + 1}`),
+                    x: Number(pl.x ?? 0),
+                    y: Number(pl.y ?? 0),
+                    width: Number(pl.width ?? 0),
+                    height: Number(pl.height ?? 0),
+                    rotated: Boolean(pl.rotated),
+                    rotation_degrees: Number(pl.rotation_degrees ?? pl.rotation ?? 0),
+                }))
+            })),
+            fallback_used: data?.fallback_used,
+            algorithm: typeof data?.algorithm === 'string' ? data.algorithm : undefined,
+            optimizer_type: typeof data?.optimizer_type === 'string' ? data.optimizer_type : undefined,
+        };
+
         return (
             <div className="space-y-4" key={`res-view-raw-${stableKey}`}>
                 {partialWarning}
                 <RawWoodResultViewer
-                    result={normalizedResults}
+                    result={rawWoodResultData}
                     optimizationId={optimizationId}
                     onDownloadPack={onDownloadPack}
                 />
@@ -139,12 +229,15 @@ export const ResultVisualizer = memo(function ResultVisualizer({
     }
 
     // BRANCHE 2 : RENDU PANNEAU STANDARD
-    const panelDataWrapper = data?.results ?? data?.result_data ?? {};
-    const hasPanelsStandard = panelDataWrapper && typeof panelDataWrapper === 'object' && Object.keys(panelDataWrapper).length > 0;
+    const emptyGroups: Record<string, VisualizerMaterialGroup> = {};
+    const panelDataWrapper = data?.results ?? data?.result_data ?? emptyGroups;
+    const hasPanelsStandard = Object.keys(panelDataWrapper).length > 0;
 
     if (hasPanelsStandard || activeResults?.length > 0) {
         // Option 1: grouped by material (standard engine formatting with `results` object)
-        const entries = hasPanelsStandard ? Object.entries(panelDataWrapper) : [['Défaut', { sheets: activeResults }]];
+        const entries: Array<[string, VisualizerMaterialGroup]> = hasPanelsStandard
+            ? Object.entries(panelDataWrapper)
+            : [['Défaut', { sheets: activeResults }]];
 
         return (
             <div className="space-y-6" key={`res-view-panel-${optimizationId || 'default'}`}>
@@ -186,7 +279,7 @@ export const ResultVisualizer = memo(function ResultVisualizer({
                 </div>
 
                 <div className="grid grid-cols-1 gap-8">
-                    {entries?.map(([material, materialData]: [string, any], matIdx: number) => {
+                    {entries?.map(([material, materialData]: [string, VisualizerMaterialGroup], matIdx: number) => {
                         // Utilisation du mapping engine-agnostic ici aussi
                         const materialPanels = materialData?.boards || materialData?.sheets || materialData?.panels || activeResults || [];
 
@@ -200,7 +293,7 @@ export const ResultVisualizer = memo(function ResultVisualizer({
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-12">
-                                    {materialPanels?.map((item: any, index: number) => {
+                                    {materialPanels?.map((item: VisualizerPanel, index: number) => {
                                         // Normalisation des placements: board.placed_pieces ou sheet.placements
                                         const placements = item?.placed_pieces || item?.placements || [];
 
@@ -209,8 +302,9 @@ export const ResultVisualizer = memo(function ResultVisualizer({
                                                 <PolygonViewer
                                                     boardWidth={item?.width || 0}
                                                     boardHeight={item?.height || 0}
-                                                    pieces={placements?.map((p: any, pIdx: number) => {
+                                                    pieces={placements?.map((p: VisualizerPiece, pIdx: number) => {
                                                         const pKey = p?.id || p?.piece_id || pIdx;
+                                                        const numId = typeof pKey === 'number' ? pKey : parseInt(String(pKey), 10) || (pIdx + 1);
                                                         const polygon = (Array.isArray(p?.polygon) && p.polygon.length >= 3)
                                                             ? p.polygon
                                                             : (p?.x !== undefined && p?.width !== undefined && p?.y !== undefined && p?.height !== undefined)
@@ -222,7 +316,7 @@ export const ResultVisualizer = memo(function ResultVisualizer({
                                                                 ]
                                                                 : [];
                                                         return {
-                                                            id: pKey,
+                                                            id: numId,
                                                             name: p?.name || p?.piece_name || `Pièce ${pKey}`,
                                                             polygon,
                                                             rotation: p?.rotation || p?.rotation_degrees || 0,

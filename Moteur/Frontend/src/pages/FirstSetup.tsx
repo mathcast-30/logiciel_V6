@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, AlertTriangle } from 'lucide-react';
 import { apiClient } from '../services/apiClient';

@@ -49,7 +49,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ analytics }) => {
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => `${value} €`} />
+                <Tooltip formatter={(value?: number) => `${value ?? 0} €`} />
               </PieChart>
               <div className="absolute top-[80px] w-full text-center pointer-events-none">
                 <span className="text-xl font-bold text-theme-text-main">{marginPrevue.toFixed(1)}%</span>
@@ -75,7 +75,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ analytics }) => {
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => `${value} €`} />
+                <Tooltip formatter={(value?: number) => `${value ?? 0} €`} />
               </PieChart>
               <div className="absolute top-[80px] w-full text-center pointer-events-none">
                 <span className="text-xl font-bold text-theme-text-main">{marginReelle.toFixed(1)}%</span>
@@ -104,7 +104,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ analytics }) => {
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#f8fafc' }}
                   itemStyle={{ color: '#38bdf8' }}
-                  formatter={(val: number) => [`${val}%`, 'K-Metric']}
+                  formatter={(val?: number) => [`${val ?? 0}%`, 'K-Metric']}
                 />
                 <ReferenceLine y={85} stroke="#f59e0b" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: 'Cible 85%', fill: '#f59e0b', fontSize: 12 }} />
                 <Line type="monotone" dataKey="value" stroke="#38bdf8" strokeWidth={3} dot={{ r: 4, fill: '#38bdf8', strokeWidth: 2, stroke: '#0f172a' }} activeDot={{ r: 6 }} />
@@ -125,7 +125,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ analytics }) => {
                 <Tooltip 
                   cursor={{fill: 'transparent'}}
                   contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#f8fafc' }}
-                  formatter={(val: number) => [`${val} €`]}
+                  formatter={(val?: number) => [`${val ?? 0} €`]}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
                 <Bar dataKey="estimated" name="Prévu" fill="#378ADD" radius={[4, 4, 0, 0]} />
@@ -146,12 +146,12 @@ export const Analytics: React.FC<AnalyticsProps> = ({ analytics }) => {
                    cx="50%" cy="50%" outerRadius={100}
                    dataKey="area_m2" stroke="none" labelLine={false}
                  >
-                   {analytics.material_distribution.map((entry, index) => {
+                   {analytics.material_distribution.map((_entry, index) => {
                      const colors = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899'];
                      return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
                    })}
                  </Pie>
-                 <Tooltip formatter={(value: number) => `${value.toFixed(1)} m²`} />
+                 <Tooltip formatter={(value?: number) => `${(value ?? 0).toFixed(1)} m²`} />
                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#94a3b8' }} />
                </PieChart>
              </ResponsiveContainer>

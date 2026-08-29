@@ -6,8 +6,10 @@ export interface Supplier {
     contact_name?: string;
     contact_phone?: string;
     contact_email?: string;
+    phone?: string;
+    email?: string;
     website?: string;
-    delivery_delay_days: number;
+    delivery_delay_days?: number;
     comments?: string;
     created_at?: string;
     materials?: SupplierMaterial[];
@@ -61,6 +63,15 @@ export interface ScrapedProduct {
     old_price?: number;
     anomaly?: boolean;
     anomaly_reason?: string;
+}
+
+export interface ScrapingResult {
+    total_pages?: number;
+    total_products?: number;
+    scanned_pages?: number;
+    type?: string;
+    analyzed_products?: ScrapedProduct[];
+    products: ScrapedProduct[];
 }
 
 export interface ScrapeStats {
@@ -145,6 +156,12 @@ export const SupplierService = {
         return response.data;
     },
 
+    // Alias for refreshPrice
+    refreshMaterialPrice: async (offerId: number): Promise<{ price: number }> => {
+        const response = await api.post<{ price: number }>(`/suppliers/offers/${offerId}/refresh`);
+        return response.data;
+    },
+
     // Link a supplier offer to an internal material
     associateProduct: async (offerId: number, materialId: number): Promise<void> => {
         await api.post(`/suppliers/offers/${offerId}/associate/${materialId}`);
@@ -154,6 +171,21 @@ export const SupplierService = {
     exportCatalog: async (): Promise<void> => {
         const baseURL = api.defaults.baseURL;
         window.open(`${baseURL}/exports/catalog/export`, '_blank');
+    },
+
+    // Export catalog CSV as Blob
+    exportCatalogCSV: async (supplierId?: number): Promise<Blob> => {
+        const url = supplierId ? `/exports/catalog/export?supplier_id=${supplierId}` : '/exports/catalog/export';
+        const response = await api.get(url, { responseType: 'blob' });
+        return response.data;
+    },
+
+    // Import catalog CSV file
+    importCatalogCSV: async (supplierId: number, file: File): Promise<{ imported: number }> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await api.post<{ imported: number }>(`/suppliers/${supplierId}/import`, formData);
+        return response.data;
     },
 
     // Get stats
@@ -178,10 +210,10 @@ export const SupplierService = {
     analyzeUrlStream: async (
         url: string,
         maxPages: number,
-        onProgress: (msg: string) => void,
-        onProducts: (products: ScrapedProduct[]) => void,
-        onComplete: (stats: ScrapeStats) => void,
-        onError: (err: string) => void
+        onProgress: (msg: string, progress?: number) => void,
+        onCompleteOrProducts: ((products: ScrapedProduct[]) => void) | ((stats: ScrapingResult) => void),
+        onComplete?: (stats: ScrapingResult) => void,
+        onError?: (err: string) => void
     ): Promise<void> => {
         try {
             const response = await fetch(`${api.defaults.baseURL}scraping/analyze`, {
@@ -213,13 +245,19 @@ export const SupplierService = {
                             const data = JSON.parse(line);
 
                             if (data.type === 'start' || data.type === 'progress') {
-                                onProgress(data.msg);
+                                onProgress(data.msg, data.progress);
                             } else if (data.type === 'products') {
-                                onProducts(data.products);
+                                if (onComplete) {
+                                    (onCompleteOrProducts as (products: ScrapedProduct[]) => void)(data.products);
+                                }
                             } else if (data.type === 'error') {
                                 console.warn("Scraping warning:", data.msg);
                             } else if (data.type === 'complete') {
-                                onComplete(data);
+                                if (onComplete) {
+                                    onComplete(data);
+                                } else {
+                                    (onCompleteOrProducts as (stats: ScrapingResult) => void)(data);
+                                }
                             }
                         } catch (e) {
                             console.error("Error parsing stream line:", line, e);
@@ -233,7 +271,11 @@ export const SupplierService = {
 
         } catch (error) {
             const msg = error instanceof Error ? error.message : "Erreur de connexion";
-            onError(msg);
+            if (onError) {
+                onError(msg);
+            } else {
+                throw error;
+            }
         }
     }
 };

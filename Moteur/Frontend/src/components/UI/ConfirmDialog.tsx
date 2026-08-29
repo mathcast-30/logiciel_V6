@@ -3,14 +3,16 @@ import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
 
 interface ConfirmDialogProps {
     isOpen: boolean;
-    onClose: () => void;
+    onClose?: () => void;
+    onCancel?: () => void;
     onConfirm: () => void;
     title: string;
     message: string;
     type?: 'danger' | 'warning' | 'info';
 }
 
-export function ConfirmDialog({ isOpen, onClose, onConfirm, title, message, type = 'warning' }: ConfirmDialogProps) {
+export function ConfirmDialog({ isOpen, onClose, onCancel, onConfirm, title, message, type = 'warning' }: ConfirmDialogProps) {
+    const handleClose = onClose || onCancel || (() => {});
     if (!isOpen) return null;
 
     const colors = {
@@ -25,7 +27,7 @@ export function ConfirmDialog({ isOpen, onClose, onConfirm, title, message, type
     return createPortal(
         <div className="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
             <div className="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={onClose}></div>
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={handleClose}></div>
 
                 <span className="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
 
@@ -47,14 +49,14 @@ export function ConfirmDialog({ isOpen, onClose, onConfirm, title, message, type
                         <button
                             type="button"
                             className={`inline-flex w-full justify-center rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm ${style.btn}`}
-                            onClick={() => { onConfirm(); onClose(); }}
+                            onClick={() => { onConfirm(); handleClose(); }}
                         >
                             Confirmer
                         </button>
                         <button
                             type="button"
                             className="mt-3 inline-flex w-full justify-center rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-base font-medium text-slate-700 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                            onClick={onClose}
+                            onClick={handleClose}
                         >
                             Annuler
                         </button>
