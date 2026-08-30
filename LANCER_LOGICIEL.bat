@@ -79,10 +79,13 @@ echo echo   OPTICUT PRO - SERVEUR APPLICATION (Port 8000) >> "%PROJECT_DIR%run_b
 echo echo ============================================================ >> "%PROJECT_DIR%run_backend.bat"
 echo "%PYTHON_EXE%" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 >> "%PROJECT_DIR%run_backend.bat"
 
+echo PROJECT_DIR = %PROJECT_DIR%
 start "OptiCut Pro Server" cmd /k "%PROJECT_DIR%run_backend.bat"
 
+echo Avant ouverture loading.html
 echo [2/2] Ouverture de la page de chargement...
 start "" "%~dp0Moteur\UserData\loading.html"
+echo Apres ouverture loading.html
 
 echo.
 echo ============================================================
