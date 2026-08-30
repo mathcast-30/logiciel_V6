@@ -84,7 +84,13 @@ start "OptiCut Pro Server" cmd /k "%PROJECT_DIR%run_backend.bat"
 
 echo Avant ouverture loading.html
 echo [2/2] Ouverture de la page de chargement...
-start "" "%~dp0Moteur\UserData\loading.html"
+SET "CHROME_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe"
+if not exist "%CHROME_PATH%" SET "CHROME_PATH=C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+if exist "%CHROME_PATH%" (
+    start "" "%CHROME_PATH%" "%~dp0Moteur\UserData\loading.html"
+) else (
+    start "" "%~dp0Moteur\UserData\loading.html"
+)
 echo Apres ouverture loading.html
 
 echo.
