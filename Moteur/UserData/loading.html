@@ -45,16 +45,12 @@
 
     function checkBackend() {
       attempts++;
-      fetch('http://localhost:8000/api/health')
-        .then(res => {
-          if (res.ok) {
-            statusEl.textContent = 'Prêt ! Redirection...';
-            setTimeout(() => {
-              window.location.href = 'http://localhost:8000';
-            }, 300);
-          } else {
-            retry();
-          }
+      fetch('http://localhost:8000/api/health', { mode: 'no-cors', cache: 'no-store' })
+        .then(() => {
+          statusEl.textContent = 'Prêt ! Redirection...';
+          setTimeout(() => {
+            window.location.href = 'http://localhost:8000';
+          }, 300);
         })
         .catch(() => retry());
     }
