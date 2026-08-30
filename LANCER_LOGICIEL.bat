@@ -81,21 +81,8 @@ echo "%PYTHON_EXE%" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 >> "%PROJ
 
 start "OptiCut Pro Server" cmd /k "%PROJECT_DIR%run_backend.bat"
 
-echo [2/2] Attente de la disponibilite du serveur (http://localhost:8000)...
-
-:wait_server
-powershell -NoProfile -Command "try { $res = Invoke-WebRequest -Uri 'http://localhost:8000/api/health' -UseBasicParsing -TimeoutSec 1; if ($res.StatusCode -eq 200) { exit 0 } else { exit 1 } } catch { exit 1 }"
-if %ERRORLEVEL% equ 0 (
-    echo [OK] Serveur operationnel sur http://localhost:8000 !
-    echo [OK] Serveur operationnel >> "%LOG_FILE%"
-    goto open_browser
-)
-timeout /t 1 /nobreak >nul
-goto wait_server
-
-:open_browser
-echo Ouverture de l'application dans votre navigateur...
-start http://localhost:8000
+echo [2/2] Ouverture de la page de chargement...
+start "" "%~dp0Moteur\UserData\loading.html"
 
 echo.
 echo ============================================================
@@ -108,3 +95,4 @@ echo Vous pouvez minimiser cette fenetre.
 echo Laissez ouverte la fenetre du serveur.
 echo.
 pause
+

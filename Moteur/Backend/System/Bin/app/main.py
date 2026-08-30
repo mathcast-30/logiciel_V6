@@ -86,6 +86,10 @@ else:
         "http://127.0.0.1:3000",
     ]
 
+for required_origin in ["http://localhost:8000", "http://127.0.0.1:8000"]:
+    if required_origin not in allow_origins:
+        allow_origins.append(required_origin)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
@@ -207,9 +211,9 @@ async def startup_event():
         log_error("Diagnostic", "Dependencies", f"ERREUR CRITIQUE: Shapely introuvable. Moteur 'Massif' indisponible. ({e})")
 
 
-@app.get("/api/health")
-def health_check():
-    """Simple health check endpoint."""
+@app.get("/api/status")
+def status_check():
+    """Detailed status & info check endpoint."""
     return {
         "status": "online", 
         "engine": "OptiCut Pro V4",

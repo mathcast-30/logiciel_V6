@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>OptiCut Pro — Démarrage</title>
+<style>
+  body {
+    margin: 0; height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: #0f0f1a; color: #fff; font-family: Segoe UI, sans-serif;
+  }
+  .logo {
+    width: 80px; height: 80px; border-radius: 16px;
+    background: linear-gradient(135deg, #6C63FF, #3B82F6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: bold; margin-bottom: 24px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+  }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  p { color: #9CA3AF; margin: 0 0 32px; }
+  .spinner {
+    width: 32px; height: 32px; border: 3px solid #2a2a3a;
+    border-top-color: #6C63FF; border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status { margin-top: 16px; font-size: 13px; color: #6B7280; }
+</style>
+</head>
+<body>
+  <div class="logo">OP</div>
+  <h1>OptiCut Pro</h1>
+  <p>Démarrage en cours...</p>
+  <div class="spinner"></div>
+  <div class="status" id="status">Initialisation du serveur...</div>
+
+  <script>
+    let attempts = 0;
+    const maxAttempts = 60; // 60 x 500ms = 30s max
+    const statusEl = document.getElementById('status');
+
+    function checkBackend() {
+      attempts++;
+      fetch('http://localhost:8000/api/health')
+        .then(res => {
+          if (res.ok) {
+            statusEl.textContent = 'Prêt ! Redirection...';
+            setTimeout(() => {
+              window.location.href = 'http://localhost:8000';
+            }, 300);
+          } else {
+            retry();
+          }
+        })
+        .catch(() => retry());
+    }
+
+    function retry() {
+      if (attempts >= maxAttempts) {
+        statusEl.textContent = 'Le démarrage prend plus de temps que prévu... Vérifiez la fenêtre du serveur.';
+        return;
+      }
+      setTimeout(checkBackend, 500);
+    }
+
+    checkBackend();
+  </script>
+</body>
+</html>
