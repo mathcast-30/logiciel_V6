@@ -70,13 +70,13 @@ echo "%PYTHON_EXE%" -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 
 start "OptiCut API Backend (Dev)" cmd /k "%PROJECT_DIR%run_backend_dev.bat"
 
 :wait_backend
-powershell -NoProfile -Command "try { $res = Invoke-WebRequest -Uri 'http://localhost:8000/api/health' -UseBasicParsing -TimeoutSec 1; if ($res.StatusCode -eq 200) { exit 0 } else { exit 1 } } catch { exit 1 }"
-if %ERRORLEVEL% equ 0 (
-    echo [OK] Backend operationnel sur http://localhost:8000 !
-    goto start_frontend
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'http://localhost:8000/api/health' -UseBasicParsing -TimeoutSec 2 | Out-Null; exit 0 } catch { exit 1 }" >nul 2>&1
+if %errorlevel% neq 0 (
+    timeout /t 1 /nobreak >nul
+    goto wait_backend
 )
-timeout /t 1 /nobreak >nul
-goto wait_backend
+echo [OK] Backend operationnel sur http://localhost:8000 !
+goto start_frontend
 
 :start_frontend
 echo [2/3] Demarrage Frontend Vite (Port 5173 npm run dev)...
@@ -89,13 +89,13 @@ echo npm run dev >> "%PROJECT_DIR%run_frontend_dev.bat"
 start "OptiCut Vite Dev Server" cmd /k "%PROJECT_DIR%run_frontend_dev.bat"
 
 :wait_frontend
-powershell -NoProfile -Command "try { $res = Invoke-WebRequest -Uri 'http://localhost:5173' -UseBasicParsing -TimeoutSec 1; exit 0 } catch { exit 1 }"
-if %ERRORLEVEL% equ 0 (
-    echo [OK] Serveur Vite prete sur http://localhost:5173 !
-    goto open_browser
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'http://localhost:5173' -UseBasicParsing -TimeoutSec 2 | Out-Null; exit 0 } catch { exit 1 }" >nul 2>&1
+if %errorlevel% neq 0 (
+    timeout /t 1 /nobreak >nul
+    goto wait_frontend
 )
-timeout /t 1 /nobreak >nul
-goto wait_frontend
+echo [OK] Serveur Vite pret sur http://localhost:5173 !
+goto open_browser
 
 :open_browser
 echo [3/3] Ouverture de http://localhost:5173...
