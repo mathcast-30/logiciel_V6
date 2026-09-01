@@ -20,7 +20,6 @@ import { LibraryPage as Library } from './pages/Library';
 import { HardwarePage } from './pages/Hardware';
 import { StepImport } from './pages/StepImport';
 import { FileExplorer } from './pages/FileExplorer';
-import { UnitConverter } from './components/Tools/UnitConverter';
 
 // Auth Pages
 import { Login } from './pages/Login';
@@ -87,7 +86,6 @@ function AppContent() {
               </Routes>
             </div>
             <Toaster position="top-right" richColors closeButton />
-            <UnitConverter />
           </div>
         </ProtectedRoute>
       } />
