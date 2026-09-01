@@ -268,10 +268,15 @@ class Part(Base):
     
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
-    # STEP Import tracking
+    # STEP Import tracking & Advanced Geometry
     step_model_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("step_models.id"), nullable=True)
     auto_extracted: Mapped[bool] = mapped_column(Boolean, default=False)  # True if extracted from STEP
     extraction_metadata: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON OBB data
+    thickness_confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    shape_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    contour_2d_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    machining_features_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    extraction_warnings_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     # Relationships
     project: Mapped[Project] = relationship("Project", back_populates="parts")
