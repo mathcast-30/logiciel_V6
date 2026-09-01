@@ -25,7 +25,8 @@ try:
     from OCC.Core.XCAFDoc import XCAFDoc_DocumentTool
     from OCC.Core.TDF import TDF_LabelSequence, TDF_Label, TDF_AttributeIterator
     from OCC.Core.TDataStd import TDataStd_Name
-    from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_FACE
+    from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_FACE, TopAbs_SHELL
+    from OCC.Core.TopoDS import topods
     from OCC.Core.Bnd import Bnd_OBB
     from OCC.Core.GProp import GProp_GProps
     from OCC.Core.TopExp import TopExp_Explorer
@@ -144,19 +145,39 @@ class StepParser:
                 self._traverse_label(referred_label, parent_name=effective_name)
                 return
 
-        # Handle Solid Body
+        # Handle Geometry Shape (Compounds, CompSolids, Solids, Shells)
         shape = self._shape_tool.GetShape(label)
-        if not shape.IsNull() and shape.ShapeType() == TopAbs_SOLID:
-            try:
-                part_data = self._analyze_geometry(shape, effective_name)
-                self.parts.append(part_data)
-            except Exception as e:
-                msg = f"Geometry error for '{effective_name}': {e}"
-                logger.warning(msg)
-                self.warnings.append(msg)
-        elif not shape.IsNull():
-            if shape.ShapeType() not in (TopAbs_SOLID,):
-                self.warnings.append(f"Ignored non-solid entity '{effective_name}' (Type: {shape.ShapeType()})")
+        if not shape.IsNull():
+            solids = self._extract_solids(shape)
+            if solids:
+                for solid in solids:
+                    try:
+                        part_data = self._analyze_geometry(solid, effective_name)
+                        self.parts.append(part_data)
+                    except Exception as e:
+                        msg = f"Geometry error for '{effective_name}': {e}"
+                        logger.warning(msg)
+                        self.warnings.append(msg)
+            else:
+                # Check for open shells (surfaces)
+                shell_exp = TopExp_Explorer(shape, TopAbs_SHELL)
+                if shell_exp.More():
+                    self.warnings.append(
+                        f"Entité '{effective_name}' contient des surfaces ouvertes (pas de corps solide fermé). "
+                        "Vérifiez dans votre logiciel CAD que vos corps sont bien de type 'Solid' et fermés."
+                    )
+                else:
+                    self.warnings.append(f"Ignored non-solid entity '{effective_name}' (Type: {shape.ShapeType()})")
+
+    def _extract_solids(self, shape) -> List[Any]:
+        """Explore récursivement le shape pour trouver TOUS les solides,
+        même imbriqués dans des compounds/assemblages."""
+        solids = []
+        explorer = TopExp_Explorer(shape, TopAbs_SOLID)
+        while explorer.More():
+            solids.append(topods.Solid(explorer.Current()))
+            explorer.Next()
+        return solids
 
     def _get_label_name(self, label: Any) -> Optional[str]:
         """Extract Name attribute from label."""

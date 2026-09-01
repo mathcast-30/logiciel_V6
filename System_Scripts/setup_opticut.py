@@ -77,7 +77,8 @@ Uses pythonocc-core (OpenCascade) for exact solid geometry analysis.
 from OCC.Core.STEPControl import STEPControl_Reader
 from OCC.Core.IFSelect import IFSelect_RetDone
 from OCC.Core.TopExp import TopExp_Explorer
-from OCC.Core.TopAbs import TopAbs_SOLID
+from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_SHELL
+from OCC.Core.TopoDS import topods
 from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.Bnd import Bnd_OBB
 from OCC.Core.BRepGProp import brepgprop_VolumeProperties
@@ -102,15 +103,28 @@ class StepExtractor:
         """Parse STEP file and extract all solids with dimensions."""
         status = self.reader.ReadFile(str(self.filepath))
         if status != IFSelect_RetDone:
-            raise ValueError(f"Failed to read STEP file. Status: {status}")
+            raise ValueError(f"Impossible de lire le fichier STEP. Status: {status}")
         
         self.reader.TransferRoots()
-        shape = self.reader.OneShape()
-        self.solids = self._extract_solids(shape)
-        
-        if not self.solids:
-            raise ValueError("No solid bodies found in STEP file")
-        
+        all_solids = []
+        for i in range(1, self.reader.NbShapes() + 1):
+            shape = self.reader.Shape(i)
+            all_solids.extend(self._extract_solids(shape))
+
+        if not all_solids:
+            # Fallback : chercher des shells (surfaces ouvertes) pour un message clair
+            shells_found = any(
+                TopExp_Explorer(self.reader.Shape(i), TopAbs_SHELL).More()
+                for i in range(1, self.reader.NbShapes() + 1)
+            )
+            if shells_found:
+                raise ValueError(
+                    "Le fichier contient des surfaces ouvertes (pas de corps solide fermé). "
+                    "Vérifiez dans Fusion 360 que vos corps sont bien de type 'Solid' et fermés."
+                )
+            raise ValueError("Aucun solide ni surface trouvé dans le fichier STEP.")
+
+        self.solids = all_solids
         parts = []
         for i, solid in enumerate(self.solids):
             try:
@@ -129,10 +143,12 @@ class StepExtractor:
         }
     
     def _extract_solids(self, shape) -> List:
+        """Explore récursivement le shape pour trouver TOUS les solides,
+        même imbriqués dans des compounds/assemblages."""
         solids = []
         explorer = TopExp_Explorer(shape, TopAbs_SOLID)
         while explorer.More():
-            solids.append(explorer.Current())
+            solids.append(topods.Solid(explorer.Current()))
             explorer.Next()
         return solids
     
