@@ -19,6 +19,7 @@ OCC_IMPORT_ERROR: str = ""
 
 try:
     from OCC.Core.STEPCAFControl import STEPCAFControl_Reader
+    from OCC.Core.STEPControl import STEPControl_Reader
     from OCC.Core.IFSelect import IFSelect_RetDone
     from OCC.Core.TDocStd import TDocStd_Document
     from OCC.Core.XCAFApp import XCAFApp_Application
@@ -72,17 +73,38 @@ class StepParser:
             raise RuntimeError("pythonOCC is not available. STEP import disabled.")
 
         try:
-            self._load_document()
-            if self._shape_tool is None:
-                raise RuntimeError("Shape tool not initialized")
+            # 1. Try XDE Document parsing first (preserves names, hierarchy, assembly colors)
+            try:
+                self._load_document()
+                if self._shape_tool is not None:
+                    root_labels = TDF_LabelSequence()
+                    self._shape_tool.GetFreeShapes(root_labels)
 
-            root_labels = TDF_LabelSequence()
-            self._shape_tool.GetFreeShapes(root_labels)
+                    for i in range(root_labels.Length()):
+                        self._traverse_label(root_labels.Value(i+1), parent_name=None)
+            except Exception as xde_err:
+                logger.warning(f"XCAF/XDE parsing attempt failed, falling back to standard reader: {xde_err}")
 
-            for i in range(root_labels.Length()):
-                self._traverse_label(root_labels.Value(i+1), parent_name=None)
+            # 2. Fallback to standard STEPControl_Reader if no solids were found via XDE
+            if not self.parts:
+                logger.info("No parts found via XDE labels, attempting direct STEPControl_Reader extraction...")
+                self._parse_fallback_stepcontrol()
 
             if not self.parts:
+                # If still no solids, check for open shells (surfaces) across the file to give a precise error
+                reader = STEPControl_Reader()
+                status = reader.ReadFile(str(self.filepath))
+                if status == IFSelect_RetDone:
+                    reader.TransferRoots()
+                    has_shells = any(
+                        TopExp_Explorer(reader.Shape(i), TopAbs_SHELL).More()
+                        for i in range(1, reader.NbShapes() + 1)
+                    )
+                    if has_shells:
+                        raise ValueError(
+                            "Le fichier contient des surfaces ouvertes (pas de corps solide fermé). "
+                            "Vérifiez dans Fusion 360 que vos corps sont bien de type 'Solid' et fermés."
+                        )
                 raise ValueError("No solid bodies found in STEP file.")
 
             return self._format_results()
@@ -90,6 +112,34 @@ class StepParser:
         except Exception as e:
             logger.error(f"Error parsing STEP file: {e}", exc_info=True)
             raise
+
+    def _parse_fallback_stepcontrol(self):
+        """Standard STEPControl_Reader extraction fallback."""
+        try:
+            reader = STEPControl_Reader()
+            status = reader.ReadFile(str(self.filepath))
+            if status != IFSelect_RetDone:
+                logger.warning(f"STEPControl_Reader failed to read file, status: {status}")
+                return
+
+            transfer_status = reader.TransferRoots()
+            nb_shapes = reader.NbShapes()
+            logger.info(f"STEPControl_Reader found {nb_shapes} root shapes (transfer status: {transfer_status})")
+            
+            for i in range(1, nb_shapes + 1):
+                shape = reader.Shape(i)
+                solids = self._extract_solids(shape)
+                for solid in solids:
+                    part_name = f"Solid_{len(self.parts) + 1}"
+                    try:
+                        part_data = self._analyze_geometry(solid, part_name)
+                        self.parts.append(part_data)
+                    except Exception as e:
+                        msg = f"Geometry error for '{part_name}': {e}"
+                        logger.warning(msg)
+                        self.warnings.append(msg)
+        except Exception as err:
+            logger.error(f"STEPControl fallback failed: {err}", exc_info=True)
 
     def _load_document(self):
         """Initialize XDE document and load STEP file."""
