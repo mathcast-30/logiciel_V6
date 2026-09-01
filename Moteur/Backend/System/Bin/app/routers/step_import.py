@@ -10,7 +10,7 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -54,6 +54,12 @@ class ExtractedPartData(BaseModel):
     obb_center: List[float] = [0.0, 0.0, 0.0]
     extraction_method: str = "Unknown"
     original_name: str = ""
+    thickness_confidence: Optional[float] = None
+    thickness_method: Optional[str] = None
+    shape_type: Optional[str] = None
+    contour_2d: Optional[List[Any]] = None
+    machining_features: Optional[List[Dict[str, Any]]] = None
+    warnings: Optional[List[str]] = []
 
 
 class StepImportResponse(BaseModel):
@@ -62,6 +68,8 @@ class StepImportResponse(BaseModel):
     parts: List[ExtractedPartData]
     metadata: Dict
     warnings: List[str] = []
+    has_low_confidence_pieces: bool = False
+    has_non_convex_pieces: bool = False
 
 
 class MaterialAssignment(BaseModel):
@@ -227,13 +235,19 @@ async def import_step_file(
                     'width': w,
                     'length': l,
                     'quantity': 1,
-                    'original_dimensions': p.get('original_dimensions', {"x": t, "y": w, "z": l}),
+                    'original_dimensions': p.get('original_dimensions', {"x": l, "y": w, "z": t}),
                     'is_modified': False,
                     'volume_mm3': p.get('volume_mm3', 0.0),
                     'volume_accuracy': p.get('volume_accuracy_percent', 0.0),
                     'obb_center': p.get('obb_center', [0.0, 0.0, 0.0]),
-                    'extraction_method': p.get('extraction_method', 'OBB-XDE'),
-                    'original_name': raw_name
+                    'extraction_method': p.get('extraction_method', 'OBB-STAT'),
+                    'original_name': raw_name,
+                    'thickness_confidence': p.get('thickness_confidence'),
+                    'thickness_method': p.get('thickness_method'),
+                    'shape_type': p.get('shape_type'),
+                    'contour_2d': p.get('contour_2d'),
+                    'machining_features': p.get('machining_features', []),
+                    'warnings': p.get('warnings', []),
                 }
             else:
                 grouped[key]['quantity'] += 1
@@ -243,6 +257,15 @@ async def import_step_file(
     for raw_data in sorted(grouped.values(), key=lambda x: x['thickness']):
         extracted_parts_list.append(ExtractedPartData(**raw_data))
 
+    has_low_confidence = any(
+        p.thickness_confidence is not None and p.thickness_confidence < 0.6
+        for p in extracted_parts_list
+    )
+    has_non_convex = any(
+        p.shape_type == "forme_structurelle_non_convexe"
+        for p in extracted_parts_list
+    )
+
     db.commit() # Save the StepModel record
 
     return StepImportResponse(
@@ -251,6 +274,8 @@ async def import_step_file(
         parts=extracted_parts_list,
         metadata=result['metadata'],
         warnings=import_warnings,
+        has_low_confidence_pieces=has_low_confidence,
+        has_non_convex_pieces=has_non_convex,
     )
 
 
@@ -278,6 +303,11 @@ async def confirm_import(
             auto_extracted=True,
             allow_rotation=True,
             grain_direction=0,
+            thickness_confidence=p.thickness_confidence,
+            shape_type=p.shape_type,
+            contour_2d_json=json.dumps(p.contour_2d) if p.contour_2d else None,
+            machining_features_json=json.dumps(p.machining_features) if p.machining_features else None,
+            extraction_warnings_json=json.dumps(p.warnings) if p.warnings else None,
             extraction_metadata=json.dumps({
                 'thickness': p.thickness,
                 'is_modified': p.is_modified,
@@ -285,6 +315,9 @@ async def confirm_import(
                 'volume_mm3': p.volume_mm3,
                 'obb_center': p.obb_center,
                 'original_name': p.original_name,
+                'thickness_confidence': p.thickness_confidence,
+                'thickness_method': p.thickness_method,
+                'shape_type': p.shape_type,
             }),
         )
         db.add(part)

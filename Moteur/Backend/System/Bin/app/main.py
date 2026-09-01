@@ -37,6 +37,32 @@ from .routers import (
 from .monitoring_client import log_info, log_error
 
 
+def _ensure_part_geometry_columns():
+    """Ajoute les colonnes géométriques à la table parts si absentes (sans casser SQLite)."""
+    from sqlalchemy import text
+    try:
+        with engine.connect() as conn:
+            # Check existing columns
+            res = conn.execute(text("PRAGMA table_info(parts)")).fetchall()
+            existing_cols = {row[1] for row in res}
+            
+            new_cols = [
+                ("thickness_confidence", "FLOAT"),
+                ("shape_type", "VARCHAR"),
+                ("contour_2d_json", "TEXT"),
+                ("machining_features_json", "TEXT"),
+                ("extraction_warnings_json", "TEXT"),
+            ]
+            
+            for col_name, col_type in new_cols:
+                if existing_cols and col_name not in existing_cols:
+                    conn.execute(text(f"ALTER TABLE parts ADD COLUMN {col_name} {col_type}"))
+                    print(f"[DB MIGRATION] Colonne '{col_name}' ajoutée à 'parts'.")
+            conn.commit()
+    except Exception as err:
+        print(f"[DB MIGRATION WARN] Vérification colonnes parts : {err}")
+
+
 def run_db_migrations():
     """
     Ensure database tables exist on startup.
@@ -53,7 +79,8 @@ def run_db_migrations():
     try:
         # Fast, non-blocking: only creates tables that don't exist yet
         Base.metadata.create_all(bind=engine)
-        print("[OK] Tables DB verifiees/creees via SQLAlchemy.")
+        _ensure_part_geometry_columns()
+        print("[OK] Tables DB et colonnes géométriques vérifiées/créées via SQLAlchemy.")
     except Exception as e:
         print(f"[DB ERROR] Impossible de verifier/creer les tables : {e}")
         log_error("Database", "Startup", f"Erreur initialisation tables: {e}", e)

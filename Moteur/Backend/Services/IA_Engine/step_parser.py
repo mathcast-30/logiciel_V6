@@ -47,14 +47,25 @@ except ImportError as e:
     OCC_IMPORT_ERROR = str(e)
     logger.warning(f"pythonOCC NOT found: {e}")
 
+try:
+    from .piece_geometry_analyzer import PieceGeometryAnalyzer, extract_all_solids
+except ImportError:
+    try:
+        from piece_geometry_analyzer import PieceGeometryAnalyzer, extract_all_solids
+    except ImportError as e:
+        logger.warning(f"PieceGeometryAnalyzer not found: {e}")
+        PieceGeometryAnalyzer = None
+        extract_all_solids = None
+
 class StepParser:
     """
     Advanced STEP Parser for woodworking applications.
     Handles Fusion 360 assembly structures, extracts OBB dimensions,
-    and implements naming inheritance logic.
+    and implements naming inheritance logic with statistical thickness
+    sampling and feature extraction.
     """
 
-    VERSION = "4.1.0-OBB"
+    VERSION = "4.2.0-GEOM-ANALYZER"
     GENERIC_NAMES = {"Body", "Solid", "Component", "Part", "Part_", "Body_", "Solid_"}
 
     def __init__(self, filepath: str):
@@ -66,6 +77,7 @@ class StepParser:
         self.warnings: List[str] = []
         self._doc: Optional[TDocStd_Document] = None
         self._shape_tool: Optional[XCAFDoc_DocumentTool] = None
+        self._analyzer = PieceGeometryAnalyzer() if PieceGeometryAnalyzer is not None else None
 
     def parse(self) -> Dict[str, Any]:
         """Entry point for parsing the STEP file."""
@@ -259,23 +271,47 @@ class StepParser:
         return name.lower() in {"solid", "body", "part", "component"}
 
     def _analyze_geometry(self, shape, name: str) -> Dict[str, Any]:
-        """Extract bounding box dimensions using OBB and Volume."""
+        """Extract bounding box, statistical thickness, 2D contour and machining features."""
+        if self._analyzer is not None:
+            analysis = self._analyzer.analyze_solid(shape)
+            if analysis.get("warnings"):
+                for w in analysis["warnings"]:
+                    self.warnings.append(f"{name}: {w}")
+            return {
+                "nom": name,
+                "longueur": analysis["length"],
+                "largeur": analysis["width"],
+                "epaisseur": analysis["thickness"],
+                "thickness_confidence": analysis["thickness_confidence"],
+                "thickness_method": analysis["thickness_method"],
+                "shape_type": analysis["shape_type"],
+                "contour_2d": analysis["contour_2d"],
+                "machining_features": analysis["machining_features"],
+                "original_dimensions": {
+                    "x": analysis["length"],
+                    "y": analysis["width"],
+                    "z": analysis["thickness"]
+                },
+                "volume_mm3": analysis["volume_mm3"],
+                "obb_center": analysis["obb_center"],
+                "volume_accuracy_percent": 100.0,
+                "extraction_method": f"OBB-STAT ({analysis['thickness_method']})",
+                "warnings": analysis["warnings"]
+            }
+
+        # Fallback si PieceGeometryAnalyzer non disponible
         obb = Bnd_OBB()
         brepbndlib.AddOBB(shape, obb, True, True, True)
 
         if obb.IsVoid():
             raise ValueError("Calculated OBB is void")
 
-        # Dimensions from OBB
         half_x, half_y, half_z = obb.XHSize(), obb.YHSize(), obb.ZHSize()
         raw_dims = [round(2 * half_x, 2), round(2 * half_y, 2), round(2 * half_z, 2)]
         
-        # Intelligent Sorting Logic:
-        # thickness = min, length = max, width = intermediate
         sorted_dims = sorted(raw_dims)
         thickness, width, length = sorted_dims
 
-        # Volumetric check
         props = GProp_GProps()
         brepgprop.VolumeProperties(shape, props)
         volume = props.Mass()
@@ -285,6 +321,11 @@ class StepParser:
             "longueur": length,
             "largeur": width,
             "epaisseur": thickness,
+            "thickness_confidence": None,
+            "thickness_method": "obb_fallback",
+            "shape_type": "panneau_rectangulaire",
+            "contour_2d": None,
+            "machining_features": [],
             "original_dimensions": {
                 "x": raw_dims[0],
                 "y": raw_dims[1],
@@ -292,8 +333,9 @@ class StepParser:
             },
             "volume_mm3": round(volume, 2),
             "obb_center": [obb.Center().X(), obb.Center().Y(), obb.Center().Z()],
-            "volume_accuracy_percent": 100.0, # Placeholder
-            "extraction_method": "OBB-XDE"
+            "volume_accuracy_percent": 100.0,
+            "extraction_method": "OBB-XDE",
+            "warnings": []
         }
 
     def _format_results(self) -> Dict[str, Any]:

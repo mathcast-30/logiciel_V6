@@ -3,6 +3,13 @@
  */
 import api from './api';
 
+export interface MachiningFeature {
+    type: 'percage' | 'rainure' | 'mortaise_ou_poche' | string;
+    bbox_width: number;
+    bbox_height: number;
+    position_center: [number, number];
+}
+
 export interface ExtractedPart {
     name: string;
     thickness: number;
@@ -16,6 +23,12 @@ export interface ExtractedPart {
     obb_center: number[];
     material_id?: number;
     original_name: string;
+    thickness_confidence?: number | null;
+    thickness_method?: string;
+    shape_type?: string;
+    contour_2d?: [number, number][] | null;
+    machining_features?: MachiningFeature[];
+    warnings?: string[];
 }
 
 export interface StepImportResponse {
@@ -24,13 +37,15 @@ export interface StepImportResponse {
     parts: ExtractedPart[];
     metadata: {
         total_parts: number;
-        total_volume_mm3: number;
+        total_volume_mm3?: number;
         average_extraction_accuracy?: number;
-        thickness_range: { min: number; max: number };
-        unit: string;
-        parser_version: string;
+        thickness_range?: { min: number; max: number };
+        unit?: string;
+        parser_version?: string;
     };
     warnings?: string[];
+    has_low_confidence_pieces?: boolean;
+    has_non_convex_pieces?: boolean;
 }
 
 export interface StepModel {
