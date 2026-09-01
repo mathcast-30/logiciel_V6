@@ -17,6 +17,7 @@ import {
     FolderArchive
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { UnitConverter } from '../Tools/UnitConverter';
 
 const navItems = [
     { path: '/management', icon: TrendingUp, label: 'Gestion' },
@@ -94,8 +95,11 @@ export function Sidebar() {
                 ))}
             </nav>
 
-            {/* Footer / User Section */}
-            <div className="p-4 border-t border-white/10 space-y-4">
+            {/* Footer / Tools & User Section */}
+            <div className="p-4 border-t border-white/10 space-y-3">
+                {/* Unit Converter Tool */}
+                <UnitConverter />
+
                 {/* Theme Toggle */}
                 <div className="bg-slate-800/50 rounded-xl p-1 flex items-center justify-between border border-white/5">
                     <button
@@ -121,14 +125,14 @@ export function Sidebar() {
                     </button>
                 </div>
 
-                <div className="glass-card bg-slate-800/50 rounded-xl p-4">
+                <div className="glass-card bg-slate-800/50 rounded-xl p-3">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
                             MP
                         </div>
                         <div className="flex-1 min-w-0 animate-fade-in">
-                            <p className="text-sm font-medium text-white truncate">Mon Atelier</p>
-                            <p className="text-xs text-slate-400">Version 4.0</p>
+                            <p className="text-xs font-medium text-white truncate">Mon Atelier</p>
+                            <p className="text-[10px] text-slate-400">Version 4.0</p>
                         </div>
                     </div>
                 </div>
