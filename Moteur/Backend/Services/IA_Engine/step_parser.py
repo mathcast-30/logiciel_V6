@@ -116,7 +116,10 @@ class StepParser:
                 except Exception as exc:
                     # Ne jamais bloquer tout l'import pour une erreur sur une pièce individuelle
                     logger.warning(f"Erreur analyse géométrique sur la pièce '{name}': {exc}")
-                    self.global_warnings.append(f"Erreur géométrie sur '{name}': {exc}")
+                    self.global_warnings.append(
+                        f"Pièce '{name}' NON INCLUSE dans le résultat (erreur d'analyse : {exc}) — "
+                        f"à vérifier manuellement, ce cas ne devrait plus arriver après le fix du 2026-09-04."
+                    )
                     continue
 
                 piece_warnings = analysis.get("warnings", [])
