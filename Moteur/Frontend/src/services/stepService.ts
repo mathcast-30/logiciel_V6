@@ -31,6 +31,7 @@ export interface ExtractedPart {
     contour_2d?: [number, number][] | null;
     machining_features?: MachiningFeature[];
     warnings?: string[];
+    extraction_warnings?: string[];
 }
 
 export interface StepImportResponse {
