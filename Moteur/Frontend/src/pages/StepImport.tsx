@@ -500,183 +500,239 @@ export function StepImport() {
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                     {editableParts.map((part, index) => {
                                         const conf = part.thickness_confidence;
-                                        const isLowConf = conf != null && conf < 0.6;
-                                        const isMedConf = conf != null && conf >= 0.6 && conf <= 0.85;
                                         const isHighConf = conf != null && conf > 0.85;
+                                        const isMedConf = conf != null && conf >= 0.6 && conf <= 0.85;
+                                        const isLowConf = conf == null || conf < 0.6;
 
                                         return (
-                                            <tr key={`${index}-${part.original_name}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
-                                                {/* Aperçu Contour 2D */}
-                                                <td className="px-5 py-3">
-                                                    <button 
-                                                        onClick={() => setInspectingPart(part)}
-                                                        className="group relative cursor-pointer block rounded transition-transform hover:scale-105"
-                                                        title="Cliquer pour inspecter la géométrie"
-                                                    >
-                                                        <ContourPreviewSvg 
-                                                            points={part.contour_2d} 
-                                                            features={part.machining_features} 
-                                                            width={90} 
-                                                            height={50} 
-                                                        />
-                                                        <div className="absolute inset-0 bg-indigo-600/10 opacity-0 group-hover:opacity-100 rounded flex items-center justify-center transition-opacity">
-                                                            <Eye className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                                                        </div>
-                                                    </button>
-                                                </td>
-
-                                                {/* Désignation & Shape Type */}
-                                                <td className="px-5 py-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <input
-                                                            type="text"
-                                                            value={part.name}
-                                                            onChange={(e) => handlePartChange(index, 'name', e.target.value)}
-                                                            className="bg-transparent border-none focus:ring-1 focus:ring-blue-500 rounded px-1 py-0.5 w-full font-medium text-slate-800 dark:text-slate-100 text-sm"
-                                                            title="Nom de la pièce"
-                                                        />
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                                        <span className="text-[10px] text-slate-400 px-1 truncate max-w-[130px]">
-                                                            {part.original_name}
-                                                        </span>
-                                                        {part.names_source === 'generic_fallback' && (
-                                                            <span className="px-1.5 py-0.2 text-[9px] font-semibold rounded bg-slate-100 dark:bg-slate-800 text-slate-500" title="Nom générique attribué">
-                                                                Nom auto
-                                                            </span>
-                                                        )}
-                                                        {part.shape_type === 'forme_structurelle_non_convexe' && (
-                                                            <span className="px-1.5 py-0.2 text-[9px] font-semibold rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
-                                                                Non-convexe
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </td>
-
-                                                {/* Épaisseur */}
-                                                <td className="px-3 py-3 text-center">
-                                                    <input
-                                                        type="number"
-                                                        value={part.thickness}
-                                                        onChange={(e) => handlePartChange(index, 'thickness', Number(e.target.value))}
-                                                        className="w-16 bg-blue-50 dark:bg-blue-900/20 border-none text-center font-bold text-blue-700 dark:text-blue-400 rounded py-1 text-sm"
-                                                    />
-                                                </td>
-
-                                                {/* Badge de Fiabilité / Confiance */}
-                                                <td className="px-3 py-3 text-center">
-                                                    {isHighConf && (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800" title={`Échantillonnage statistique : ${Math.round(conf * 100)}% de concordance`}>
-                                                            <ShieldCheck className="h-3 w-3" />
-                                                            {Math.round(conf * 100)}%
-                                                        </span>
-                                                    )}
-                                                    {isMedConf && (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800" title={`Confiance moyenne : ${Math.round(conf * 100)}%. À vérifier.`}>
-                                                            <Info className="h-3 w-3" />
-                                                            {Math.round(conf * 100)}%
-                                                        </span>
-                                                    )}
-                                                    {(isLowConf || conf == null) && (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800" title="Confiance faible ou repli OBB. Vérifiez manuellement l'épaisseur.">
-                                                            <ShieldAlert className="h-3 w-3" />
-                                                            {conf != null ? `${Math.round(conf * 100)}%` : 'OBB'}
-                                                        </span>
-                                                    )}
-                                                </td>
-
-                                                {/* Largeur */}
-                                                <td className="px-3 py-3 text-center">
-                                                    <input
-                                                        type="number"
-                                                        value={part.width}
-                                                        onChange={(e) => handlePartChange(index, 'width', Number(e.target.value))}
-                                                        className="w-20 bg-transparent border-none text-center font-medium rounded py-1 text-sm"
-                                                    />
-                                                </td>
-
-                                                {/* Longueur */}
-                                                <td className="px-3 py-3 text-center">
-                                                    <input
-                                                        type="number"
-                                                        value={part.length}
-                                                        onChange={(e) => handlePartChange(index, 'length', Number(e.target.value))}
-                                                        className="w-20 bg-transparent border-none text-center font-medium rounded py-1 text-sm"
-                                                    />
-                                                </td>
-
-                                                {/* Rotation dimensions */}
-                                                <td className="px-3 py-3 text-center">
-                                                    <button
-                                                        onClick={() => handleSwapDimensions(index)}
-                                                        className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-500 rounded-lg transition-transform hover:rotate-90"
-                                                        title="Permuter les dimensions (L -> W -> T)"
-                                                    >
-                                                        <RefreshCw className="h-3.5 w-3.5" />
-                                                    </button>
-                                                </td>
-
-                                                {/* Quantité */}
-                                                <td className="px-3 py-3 text-center">
-                                                    <input
-                                                        type="number"
-                                                        value={part.quantity}
-                                                        onChange={(e) => handlePartChange(index, 'quantity', Number(e.target.value))}
-                                                        className="w-12 bg-transparent border-none text-center font-medium rounded py-1 text-sm"
-                                                    />
-                                                </td>
-
-                                                {/* Usinages Résumé */}
-                                                <td className="px-4 py-3">
-                                                    {part.machining_features && part.machining_features.length > 0 ? (
+                                            <React.Fragment key={`${index}-${part.original_name}`}>
+                                                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                                                    {/* Aperçu Contour 2D */}
+                                                    <td className="px-5 py-3">
                                                         <button 
                                                             onClick={() => setInspectingPart(part)}
-                                                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-xs font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 transition-colors"
+                                                            className="group relative cursor-pointer block rounded transition-transform hover:scale-105"
+                                                            title="Cliquer pour inspecter la géométrie"
                                                         >
-                                                            <Drill className="h-3.5 w-3.5" />
-                                                            <span>{part.machining_features.length} usinage{part.machining_features.length > 1 ? 's' : ''}</span>
+                                                            <ContourPreviewSvg 
+                                                                points={part.contour_2d} 
+                                                                features={part.machining_features} 
+                                                                width={90} 
+                                                                height={50} 
+                                                            />
+                                                            <div className="absolute inset-0 bg-indigo-600/10 opacity-0 group-hover:opacity-100 rounded flex items-center justify-center transition-opacity">
+                                                                <Eye className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                                            </div>
                                                         </button>
-                                                    ) : (
-                                                        <span className="text-xs text-slate-400">Aucun</span>
-                                                    )}
-                                                </td>
+                                                    </td>
 
-                                                {/* Matériau */}
-                                                <td className="px-4 py-3">
-                                                    <select
-                                                        value={part.material_id || ''}
-                                                        onChange={(e) => handlePartChange(index, 'material_id', Number(e.target.value))}
-                                                        className="text-xs bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-lg w-full max-w-[140px]"
-                                                    >
-                                                        <option value="">-- Matériau --</option>
-                                                        {materials.map(m => (
-                                                            <option key={m.id} value={m.id}>
-                                                                {m.name} ({m.thickness}mm)
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </td>
+                                                    {/* Désignation & Noms */}
+                                                    <td className="px-5 py-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                type="text"
+                                                                value={part.component_name || part.name}
+                                                                onChange={(e) => {
+                                                                    handlePartChange(index, 'name', e.target.value);
+                                                                    handlePartChange(index, 'component_name', e.target.value);
+                                                                }}
+                                                                className="bg-transparent border-none focus:ring-1 focus:ring-blue-500 rounded px-1 py-0.5 w-full font-medium text-slate-800 dark:text-slate-100 text-sm"
+                                                                title="Nom de la pièce"
+                                                            />
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                                            <span className="text-[10px] text-slate-400 px-1 truncate max-w-[130px]">
+                                                                {part.original_name}
+                                                            </span>
+                                                            {part.names_source === 'generic_fallback' ? (
+                                                                <span className="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40" title="Nom générique attribué, pensez à renommer si besoin">
+                                                                    nom générique, à renommer
+                                                                </span>
+                                                            ) : part.names_source === 'fusion_xcaf' ? (
+                                                                <span className="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40" title="Nom issu du composant Fusion 360">
+                                                                    Fusion 360
+                                                                </span>
+                                                            ) : null}
+                                                        </div>
+                                                    </td>
 
-                                                {/* Actions */}
-                                                <td className="px-4 py-3 text-right">
-                                                    <div className="flex items-center justify-end gap-1">
+                                                    {/* Épaisseur */}
+                                                    <td className="px-3 py-3 text-center">
+                                                        <input
+                                                            type="number"
+                                                            value={part.thickness}
+                                                            onChange={(e) => handlePartChange(index, 'thickness', Number(e.target.value))}
+                                                            className="w-16 bg-blue-50 dark:bg-blue-900/20 border-none text-center font-bold text-blue-700 dark:text-blue-400 rounded py-1 text-sm"
+                                                        />
+                                                    </td>
+
+                                                    {/* Badge de Fiabilité / Confiance */}
+                                                    <td className="px-3 py-3 text-center">
+                                                        {isHighConf && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800" title={`Échantillonnage statistique : ${Math.round(conf * 100)}% de concordance`}>
+                                                                <ShieldCheck className="h-3 w-3" />
+                                                                {Math.round(conf * 100)}%
+                                                            </span>
+                                                        )}
+                                                        {isMedConf && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800" title={`Confiance moyenne : ${Math.round(conf * 100)}%. À vérifier.`}>
+                                                                <Info className="h-3 w-3" />
+                                                                {Math.round(conf * 100)}%
+                                                            </span>
+                                                        )}
+                                                        {isLowConf && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800" title="Confiance faible (< 60%) ou repli OBB. Vérifiez manuellement l'épaisseur.">
+                                                                <ShieldAlert className="h-3 w-3" />
+                                                                {conf != null ? `${Math.round(conf * 100)}%` : 'OBB'}
+                                                            </span>
+                                                        )}
+                                                    </td>
+
+                                                    {/* Largeur */}
+                                                    <td className="px-3 py-3 text-center">
+                                                        <input
+                                                            type="number"
+                                                            value={part.width}
+                                                            onChange={(e) => handlePartChange(index, 'width', Number(e.target.value))}
+                                                            className="w-20 bg-transparent border-none text-center font-medium rounded py-1 text-sm"
+                                                        />
+                                                    </td>
+
+                                                    {/* Longueur */}
+                                                    <td className="px-3 py-3 text-center">
+                                                        <input
+                                                            type="number"
+                                                            value={part.length}
+                                                            onChange={(e) => handlePartChange(index, 'length', Number(e.target.value))}
+                                                            className="w-20 bg-transparent border-none text-center font-medium rounded py-1 text-sm"
+                                                        />
+                                                    </td>
+
+                                                    {/* Rotation dimensions */}
+                                                    <td className="px-3 py-3 text-center">
                                                         <button
-                                                            onClick={() => setInspectingPart(part)}
-                                                            className="p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg transition-colors"
-                                                            title="Inspecter la géométrie"
+                                                            onClick={() => handleSwapDimensions(index)}
+                                                            className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-500 rounded-lg transition-transform hover:rotate-90"
+                                                            title="Permuter les dimensions (L -> W -> T)"
                                                         >
-                                                            <Eye className="h-4 w-4" />
+                                                            <RefreshCw className="h-3.5 w-3.5" />
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleDeletePart(index)}
-                                                            className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 rounded-lg transition-colors"
-                                                            title="Supprimer cette pièce"
+                                                    </td>
+
+                                                    {/* Quantité */}
+                                                    <td className="px-3 py-3 text-center">
+                                                        <input
+                                                            type="number"
+                                                            value={part.quantity}
+                                                            onChange={(e) => handlePartChange(index, 'quantity', Number(e.target.value))}
+                                                            className="w-12 bg-transparent border-none text-center font-medium rounded py-1 text-sm"
+                                                        />
+                                                    </td>
+
+                                                    {/* Usinages Résumé & Accordéon */}
+                                                    <td className="px-4 py-3">
+                                                        {part.machining_features && part.machining_features.length > 0 ? (
+                                                            <button 
+                                                                type="button"
+                                                                onClick={() => toggleMachiningRow(index)}
+                                                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800/40 transition-colors"
+                                                                title="Afficher/masquer les détails des usinages"
+                                                            >
+                                                                <Drill className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                                                                <span>{part.machining_features.length} usinage{part.machining_features.length > 1 ? 's' : ''}</span>
+                                                                {expandedMachiningRows[index] ? (
+                                                                    <ChevronUp className="h-3 w-3" />
+                                                                ) : (
+                                                                    <ChevronDown className="h-3 w-3" />
+                                                                )}
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-xs text-slate-400">Aucun</span>
+                                                        )}
+                                                    </td>
+
+                                                    {/* Matériau */}
+                                                    <td className="px-4 py-3">
+                                                        <select
+                                                            value={part.material_id || ''}
+                                                            onChange={(e) => handlePartChange(index, 'material_id', Number(e.target.value))}
+                                                            className="text-xs bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-lg w-full max-w-[140px]"
                                                         >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                                            <option value="">-- Matériau --</option>
+                                                            {materials.map(m => (
+                                                                <option key={m.id} value={m.id}>
+                                                                    {m.name} ({m.thickness}mm)
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </td>
+
+                                                    {/* Actions */}
+                                                    <td className="px-4 py-3 text-right">
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <button
+                                                                onClick={() => setInspectingPart(part)}
+                                                                className="p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg transition-colors"
+                                                                title="Inspecter la géométrie"
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeletePart(index)}
+                                                                className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 rounded-lg transition-colors"
+                                                                title="Supprimer cette pièce"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+                                                {/* Accordéon Ligne Usinages */}
+                                                {expandedMachiningRows[index] && part.machining_features && part.machining_features.length > 0 && (
+                                                    <tr className="bg-amber-50/40 dark:bg-amber-950/10 border-b border-amber-100 dark:border-amber-900/30">
+                                                        <td colSpan={11} className="px-6 py-3">
+                                                            <div className="space-y-2">
+                                                                <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                                                                    <span className="flex items-center gap-2">
+                                                                        <Drill className="h-4 w-4 text-amber-500" />
+                                                                        Usinages détaillés pour {part.component_name || part.name} :
+                                                                    </span>
+                                                                    <span className="text-[11px] font-normal text-slate-400">
+                                                                        {part.machining_features.length} élément{part.machining_features.length > 1 ? 's' : ''} détecté{part.machining_features.length > 1 ? 's' : ''}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                                                    {part.machining_features.map((feat, fIdx) => (
+                                                                        <div key={`${index}-feat-${fIdx}`} className="p-2 bg-white dark:bg-slate-800/80 rounded-lg border border-amber-200/80 dark:border-amber-900/40 text-xs space-y-1 shadow-sm">
+                                                                            <div className="flex items-center justify-between">
+                                                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                                                                    feat.type === 'percage' ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+                                                                                }`}>
+                                                                                    {feat.type}
+                                                                                </span>
+                                                                                <span className="text-[10px] text-slate-400">
+                                                                                    Pos: ({feat.position_center[0].toFixed(1)}, {feat.position_center[1].toFixed(1)})
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="text-slate-700 dark:text-slate-200 font-medium">
+                                                                                Dimensions : {feat.bbox_width.toFixed(1)} × {feat.bbox_height.toFixed(1)} mm
+                                                                                {feat.depth != null ? ` • Profondeur: ${feat.depth.toFixed(1)} mm` : ''}
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                                {part.extraction_warnings && part.extraction_warnings.length > 0 && (
+                                                                    <div className="text-[11px] text-amber-700 dark:text-amber-300 flex items-center gap-1.5 pt-1">
+                                                                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                                                                        <span>Remarques : {part.extraction_warnings.join(' • ')}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
                                         );
                                     })}
                                 </tbody>
