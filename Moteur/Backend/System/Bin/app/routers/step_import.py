@@ -42,6 +42,8 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 class ExtractedPartData(BaseModel):
     """Internal schema for validating part data extracted from STEP."""
     name: str
+    component_name: Optional[str] = None
+    names_source: Optional[str] = "fusion_xcaf"
     thickness: float
     width: float
     length: float
@@ -56,7 +58,6 @@ class ExtractedPartData(BaseModel):
     original_name: str = ""
     thickness_confidence: Optional[float] = None
     thickness_method: Optional[str] = None
-    shape_type: Optional[str] = None
     contour_2d: Optional[List[Any]] = None
     machining_features: Optional[List[Dict[str, Any]]] = None
     warnings: Optional[List[str]] = []
@@ -67,9 +68,9 @@ class StepImportResponse(BaseModel):
     filename: str
     parts: List[ExtractedPartData]
     metadata: Dict
+    names_source: str = "fusion_xcaf"
     warnings: List[str] = []
     has_low_confidence_pieces: bool = False
-    has_non_convex_pieces: bool = False
 
 
 class MaterialAssignment(BaseModel):
@@ -224,6 +225,8 @@ async def import_step_file(
             w = p.get('largeur', 0.0)
             l = p.get('longueur', 0.0)
             raw_name = p.get('nom', 'Untitled')
+            comp_name = p.get('component_name', raw_name)
+            p_names_source = p.get('names_source', result.get('names_source', 'fusion_xcaf'))
             cleaned_name = re.sub(r'[\d_]+$', '', raw_name).strip() or raw_name
             
             key = (t, w, l, cleaned_name)
@@ -231,6 +234,8 @@ async def import_step_file(
             if key not in grouped:
                 grouped[key] = {
                     'name': cleaned_name,
+                    'component_name': comp_name,
+                    'names_source': p_names_source,
                     'thickness': t,
                     'width': w,
                     'length': l,
@@ -244,7 +249,6 @@ async def import_step_file(
                     'original_name': raw_name,
                     'thickness_confidence': p.get('thickness_confidence'),
                     'thickness_method': p.get('thickness_method'),
-                    'shape_type': p.get('shape_type'),
                     'contour_2d': p.get('contour_2d'),
                     'machining_features': p.get('machining_features', []),
                     'warnings': p.get('warnings', []),
@@ -261,10 +265,6 @@ async def import_step_file(
         p.thickness_confidence is not None and p.thickness_confidence < 0.6
         for p in extracted_parts_list
     )
-    has_non_convex = any(
-        p.shape_type == "forme_structurelle_non_convexe"
-        for p in extracted_parts_list
-    )
 
     db.commit() # Save the StepModel record
 
@@ -273,9 +273,9 @@ async def import_step_file(
         filename=file.filename,
         parts=extracted_parts_list,
         metadata=result['metadata'],
+        names_source=result.get('names_source', 'fusion_xcaf'),
         warnings=import_warnings,
         has_low_confidence_pieces=has_low_confidence,
-        has_non_convex_pieces=has_non_convex,
     )
 
 
@@ -296,6 +296,8 @@ async def confirm_import(
             project_id=step_model.project_id,
             step_model_id=step_model_id,
             name=p.name,
+            component_name=p.component_name or p.name,
+            names_source=p.names_source or "fusion_xcaf",
             width=p.width,
             height=p.length, # length is height in DB (legacy mapping)
             quantity=p.quantity,
@@ -304,7 +306,7 @@ async def confirm_import(
             allow_rotation=True,
             grain_direction=0,
             thickness_confidence=p.thickness_confidence,
-            shape_type=p.shape_type,
+            thickness_method=p.thickness_method,
             contour_2d_json=json.dumps(p.contour_2d) if p.contour_2d else None,
             machining_features_json=json.dumps(p.machining_features) if p.machining_features else None,
             extraction_warnings_json=json.dumps(p.warnings) if p.warnings else None,
@@ -315,9 +317,10 @@ async def confirm_import(
                 'volume_mm3': p.volume_mm3,
                 'obb_center': p.obb_center,
                 'original_name': p.original_name,
+                'component_name': p.component_name,
+                'names_source': p.names_source,
                 'thickness_confidence': p.thickness_confidence,
                 'thickness_method': p.thickness_method,
-                'shape_type': p.shape_type,
             }),
         )
         db.add(part)

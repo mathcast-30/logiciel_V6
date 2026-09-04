@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
     Upload, FileUp, Loader2, CheckCircle2, Package, Layers, RefreshCw, 
     Trash2, Save, AlertTriangle, ShieldCheck, ShieldAlert, 
-    Eye, Shapes, Drill, X, Info 
+    Eye, Shapes, Drill, X, Info, ChevronDown, ChevronUp 
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { StepService, type StepImportResponse, type ExtractedPart, type MachiningFeature } from '../services/stepService';
@@ -123,10 +123,10 @@ function GeometryDetailModal({
                         </div>
                         <div>
                             <h3 className="font-bold text-slate-800 dark:text-white text-lg">
-                                {part.name}
+                                {part.component_name || part.name}
                             </h3>
                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                                Nom d'origine : {part.original_name}
+                                Nom d'origine : {part.original_name} {part.names_source ? `(${part.names_source})` : ''}
                             </p>
                         </div>
                     </div>
@@ -239,6 +239,14 @@ export function StepImport() {
     const [editableParts, setEditableParts] = useState<ExtractedPart[]>([]);
     const [materials, setMaterials] = useState<Material[]>([]);
     const [inspectingPart, setInspectingPart] = useState<ExtractedPart | null>(null);
+    const [expandedMachiningRows, setExpandedMachiningRows] = useState<Record<number, boolean>>({});
+
+    const toggleMachiningRow = (index: number) => {
+        setExpandedMachiningRows(prev => ({
+            ...prev,
+            [index]: !prev[index]
+        }));
+    };
 
     const loadData = useCallback(async () => {
         try {
@@ -435,17 +443,17 @@ export function StepImport() {
                     </div>
 
                     {/* Alertes globales si pièces à vérifier */}
-                    {(importResult.has_low_confidence_pieces || importResult.has_non_convex_pieces) && (
+                    {(importResult.has_low_confidence_pieces || importResult.names_source === 'generic_fallback') && (
                         <div className="p-4 rounded-xl border bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50 flex items-start gap-3 text-amber-800 dark:text-amber-200 text-sm">
                             <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                             <div className="space-y-1">
-                                <p className="font-bold">Points d'attention détectés sur la géométrie :</p>
+                                <p className="font-bold">Points d'attention détectés lors de l'analyse :</p>
                                 <ul className="list-disc list-inside text-xs space-y-0.5 text-amber-700 dark:text-amber-300">
                                     {importResult.has_low_confidence_pieces && (
                                         <li>Certaines pièces présentent une confiance d'épaisseur &lt; 60% (usinages profonds ou géométrie inhabituelle). Vérifiez l'épaisseur manuellement.</li>
                                     )}
-                                    {importResult.has_non_convex_pieces && (
-                                        <li>Des formes non rectangulaires (en L / équerre) ont été détectées. Le contour réel a été extrait pour l'optimisation.</li>
+                                    {importResult.names_source === 'generic_fallback' && (
+                                        <li>Les noms Fusion 360 n'ont pas pu être extraits de ce fichier : des noms génériques ont été attribués ("nom générique, à renommer").</li>
                                     )}
                                 </ul>
                             </div>
@@ -528,10 +536,15 @@ export function StepImport() {
                                                             title="Nom de la pièce"
                                                         />
                                                     </div>
-                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                                         <span className="text-[10px] text-slate-400 px-1 truncate max-w-[130px]">
                                                             {part.original_name}
                                                         </span>
+                                                        {part.names_source === 'generic_fallback' && (
+                                                            <span className="px-1.5 py-0.2 text-[9px] font-semibold rounded bg-slate-100 dark:bg-slate-800 text-slate-500" title="Nom générique attribué">
+                                                                Nom auto
+                                                            </span>
+                                                        )}
                                                         {part.shape_type === 'forme_structurelle_non_convexe' && (
                                                             <span className="px-1.5 py-0.2 text-[9px] font-semibold rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
                                                                 Non-convexe

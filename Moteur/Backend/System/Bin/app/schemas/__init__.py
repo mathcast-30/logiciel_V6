@@ -224,8 +224,10 @@ class PartBase(BaseModel):
     edge_left_id: Optional[int] = None
     edge_right_id: Optional[int] = None
     notes: Optional[str] = None
+    component_name: Optional[str] = None
+    names_source: Optional[str] = None
     thickness_confidence: Optional[float] = None
-    shape_type: Optional[str] = None
+    thickness_method: Optional[str] = None
     contour_2d_json: Optional[str] = None
     machining_features_json: Optional[str] = None
     extraction_warnings_json: Optional[str] = None

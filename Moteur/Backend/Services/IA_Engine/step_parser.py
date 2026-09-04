@@ -1,7 +1,7 @@
 """
 STEP File Parser with XDE (Extended Data Exchange)
-Extracts geometry AND metadata (Names, Colors) from STEP files.
-Optimized for Fusion 360 assemblies with naming inheritance and OBB calculation.
+Extracts geometry AND metadata (Names) from STEP files.
+Optimized for Fusion 360 assemblies with robust OBB calculation.
 """
 from typing import Optional, Dict, List, Tuple, Any
 from pathlib import Path
@@ -18,27 +18,15 @@ OCC_VERSION: str = "N/A"
 OCC_IMPORT_ERROR: str = ""
 
 try:
-    from OCC.Core.STEPCAFControl import STEPCAFControl_Reader
     from OCC.Core.STEPControl import STEPControl_Reader
     from OCC.Core.IFSelect import IFSelect_RetDone
-    from OCC.Core.TDocStd import TDocStd_Document
-    from OCC.Core.XCAFApp import XCAFApp_Application
-    from OCC.Core.XCAFDoc import XCAFDoc_DocumentTool
-    from OCC.Core.TDF import TDF_LabelSequence, TDF_Label, TDF_AttributeIterator
-    from OCC.Core.TDataStd import TDataStd_Name
-    from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_FACE, TopAbs_SHELL
-    from OCC.Core.TopoDS import topods
-    from OCC.Core.Bnd import Bnd_OBB
-    from OCC.Core.GProp import GProp_GProps
+    from OCC.Core.TopAbs import TopAbs_SHELL
     from OCC.Core.TopExp import TopExp_Explorer
-    from OCC.Core.BRepGProp import brepgprop
-    from OCC.Core.BRepBndLib import brepbndlib
 
-    # Get version if possible
     try:
         import OCC
         OCC_VERSION = getattr(OCC, "__version__", "installed")
-    except:
+    except Exception:
         pass
 
     OCC_AVAILABLE = True
@@ -48,35 +36,36 @@ except ImportError as e:
     logger.warning(f"pythonOCC NOT found: {e}")
 
 try:
-    from .piece_geometry_analyzer import PieceGeometryAnalyzer, extract_all_solids
+    from .piece_geometry_analyzer import PieceGeometryAnalyzer
+    from .step_name_extractor import extract_named_solids_safe
 except ImportError:
     try:
-        from piece_geometry_analyzer import PieceGeometryAnalyzer, extract_all_solids
+        from piece_geometry_analyzer import PieceGeometryAnalyzer
+        from step_name_extractor import extract_named_solids_safe
     except ImportError as e:
-        logger.warning(f"PieceGeometryAnalyzer not found: {e}")
+        logger.warning(f"Imports PieceGeometryAnalyzer/extract_named_solids_safe failed: {e}")
         PieceGeometryAnalyzer = None
-        extract_all_solids = None
+        extract_named_solids_safe = None
+
 
 class StepParser:
     """
     Advanced STEP Parser for woodworking applications.
-    Handles Fusion 360 assembly structures, extracts OBB dimensions,
-    and implements naming inheritance logic with statistical thickness
-    sampling and feature extraction.
+    Uses extract_named_solids_safe for component names (XCAF + fallback)
+    and PieceGeometryAnalyzer for guaranteed OBB dimensions and optional features.
     """
 
-    VERSION = "4.2.0-GEOM-ANALYZER"
-    GENERIC_NAMES = {"Body", "Solid", "Component", "Part", "Part_", "Body_", "Solid_"}
+    VERSION = "5.0.0-ROBUST-OBB"
 
     def __init__(self, filepath: str):
         self.filepath = Path(filepath)
         if not self.filepath.exists():
             raise FileNotFoundError(f"STEP file not found: {filepath}")
-        
+
         self.parts: List[Dict[str, Any]] = []
-        self.warnings: List[str] = []
-        self._doc: Optional[TDocStd_Document] = None
-        self._shape_tool: Optional[XCAFDoc_DocumentTool] = None
+        self.pieces: List[Dict[str, Any]] = []
+        self.global_warnings: List[str] = []
+        self.names_source: str = "fusion_xcaf"
         self._analyzer = PieceGeometryAnalyzer() if PieceGeometryAnalyzer is not None else None
 
     def parse(self) -> Dict[str, Any]:
@@ -84,40 +73,97 @@ class StepParser:
         if not OCC_AVAILABLE:
             raise RuntimeError("pythonOCC is not available. STEP import disabled.")
 
+        if extract_named_solids_safe is None or self._analyzer is None:
+            raise RuntimeError("Modules piece_geometry_analyzer ou step_name_extractor non disponibles.")
+
         try:
-            # 1. Try XDE Document parsing first (preserves names, hierarchy, assembly colors)
-            try:
-                self._load_document()
-                if self._shape_tool is not None:
-                    root_labels = TDF_LabelSequence()
-                    self._shape_tool.GetFreeShapes(root_labels)
+            # 1. Extraction sécurisée des solides nommés (XCAF ou fallback interne)
+            extracted = extract_named_solids_safe(str(self.filepath))
+            named_solids = extracted.get("solids", [])
+            self.names_source = extracted.get("names_source", "generic_fallback")
 
-                    for i in range(root_labels.Length()):
-                        self._traverse_label(root_labels.Value(i+1), parent_name=None)
-            except Exception as xde_err:
-                logger.warning(f"XCAF/XDE parsing attempt failed, falling back to standard reader: {xde_err}")
+            if extracted.get("warning"):
+                self.global_warnings.append(extracted["warning"])
 
-            # 2. Fallback to standard STEPControl_Reader if no solids were found via XDE
-            if not self.parts:
-                logger.info("No parts found via XDE labels, attempting direct STEPControl_Reader extraction...")
-                self._parse_fallback_stepcontrol()
-
-            if not self.parts:
-                # If still no solids, check for open shells (surfaces) across the file to give a precise error
-                reader = STEPControl_Reader()
-                status = reader.ReadFile(str(self.filepath))
-                if status == IFSelect_RetDone:
-                    reader.TransferRoots()
-                    has_shells = any(
-                        TopExp_Explorer(reader.Shape(i), TopAbs_SHELL).More()
-                        for i in range(1, reader.NbShapes() + 1)
-                    )
-                    if has_shells:
-                        raise ValueError(
-                            "Le fichier contient des surfaces ouvertes (pas de corps solide fermé). "
-                            "Vérifiez dans Fusion 360 que vos corps sont bien de type 'Solid' et fermés."
+            if not named_solids:
+                # Vérifier si le fichier contient des surfaces ouvertes (coquilles) pour diagnostic précis
+                try:
+                    reader = STEPControl_Reader()
+                    status = reader.ReadFile(str(self.filepath))
+                    if status == IFSelect_RetDone:
+                        reader.TransferRoots()
+                        has_shells = any(
+                            TopExp_Explorer(reader.Shape(i), TopAbs_SHELL).More()
+                            for i in range(1, reader.NbShapes() + 1)
                         )
+                        if has_shells:
+                            raise ValueError(
+                                "Le fichier contient des surfaces ouvertes (pas de corps solide fermé). "
+                                "Vérifiez dans Fusion 360 que vos corps sont bien de type 'Solid' et fermés."
+                            )
+                except Exception:
+                    pass
+
                 raise ValueError("No solid bodies found in STEP file.")
+
+            # 2. Analyse géométrique pour chaque solide (OBB toujours prioritaire)
+            for item in named_solids:
+                solid = item["solid"]
+                name = item.get("name", "Piece")
+
+                try:
+                    analysis = self._analyzer.analyze_solid(solid)
+                except Exception as exc:
+                    # Ne jamais bloquer tout l'import pour une erreur sur une pièce individuelle
+                    logger.warning(f"Erreur analyse géométrique sur la pièce '{name}': {exc}")
+                    self.global_warnings.append(f"Erreur géométrie sur '{name}': {exc}")
+                    continue
+
+                piece_warnings = analysis.get("warnings", [])
+                for w in piece_warnings:
+                    logger.warning(f"[{name}] {w}")
+
+                # Structure de pièce conforme au contrat d'intégration
+                piece_data = {
+                    "name": name,
+                    "width": float(analysis["length"]),
+                    "height": float(analysis["width"]),
+                    "thickness": float(analysis["thickness"]),
+                    "thickness_confidence": analysis.get("thickness_confidence"),
+                    "thickness_method": analysis.get("thickness_method", "obb"),
+                    "contour_2d": analysis.get("contour_2d"),
+                    "machining_features": analysis.get("machining_features", []),
+                    "warnings": piece_warnings,
+                }
+                self.pieces.append(piece_data)
+
+                # Format part compatible avec les routes et le modèle Part existant
+                part_entry = {
+                    "nom": name,
+                    "component_name": name,
+                    "names_source": self.names_source,
+                    "longueur": float(analysis["length"]),
+                    "largeur": float(analysis["width"]),
+                    "epaisseur": float(analysis["thickness"]),
+                    "thickness_confidence": analysis.get("thickness_confidence"),
+                    "thickness_method": analysis.get("thickness_method", "obb"),
+                    "contour_2d": analysis.get("contour_2d"),
+                    "machining_features": analysis.get("machining_features", []),
+                    "original_dimensions": {
+                        "x": float(analysis["length"]),
+                        "y": float(analysis["width"]),
+                        "z": float(analysis["thickness"]),
+                    },
+                    "volume_mm3": analysis.get("volume_mm3", 0.0),
+                    "obb_center": analysis.get("obb_center", [0.0, 0.0, 0.0]),
+                    "volume_accuracy_percent": 100.0,
+                    "extraction_method": f"OBB-STAT ({analysis.get('thickness_method', 'obb')})",
+                    "warnings": piece_warnings,
+                }
+                self.parts.append(part_entry)
+
+            if not self.pieces:
+                raise ValueError("No solid bodies could be analyzed in STEP file.")
 
             return self._format_results()
 
@@ -125,221 +171,8 @@ class StepParser:
             logger.error(f"Error parsing STEP file: {e}", exc_info=True)
             raise
 
-    def _parse_fallback_stepcontrol(self):
-        """Standard STEPControl_Reader extraction fallback."""
-        try:
-            reader = STEPControl_Reader()
-            status = reader.ReadFile(str(self.filepath))
-            if status != IFSelect_RetDone:
-                logger.warning(f"STEPControl_Reader failed to read file, status: {status}")
-                return
-
-            transfer_status = reader.TransferRoots()
-            nb_shapes = reader.NbShapes()
-            logger.info(f"STEPControl_Reader found {nb_shapes} root shapes (transfer status: {transfer_status})")
-            
-            for i in range(1, nb_shapes + 1):
-                shape = reader.Shape(i)
-                solids = self._extract_solids(shape)
-                for solid in solids:
-                    part_name = f"Solid_{len(self.parts) + 1}"
-                    try:
-                        part_data = self._analyze_geometry(solid, part_name)
-                        self.parts.append(part_data)
-                    except Exception as e:
-                        msg = f"Geometry error for '{part_name}': {e}"
-                        logger.warning(msg)
-                        self.warnings.append(msg)
-        except Exception as err:
-            logger.error(f"STEPControl fallback failed: {err}", exc_info=True)
-
-    def _load_document(self):
-        """Initialize XDE document and load STEP file."""
-        app = XCAFApp_Application.GetApplication()
-        self._doc = TDocStd_Document("MDTV-XCAF")
-        app.NewDocument("MDTV-XCAF", self._doc)
-
-        reader = STEPCAFControl_Reader()
-        reader.SetColorMode(True)
-        reader.SetNameMode(True)
-        
-        status = reader.ReadFile(str(self.filepath))
-        if status != IFSelect_RetDone:
-            raise ValueError(f"Failed to read STEP file. Status: {status}")
-
-        if not reader.Transfer(self._doc):
-            raise ValueError("Failed to transfer STEP data to document")
-
-        self._shape_tool = XCAFDoc_DocumentTool.ShapeTool(self._doc.Main())
-
-    def _traverse_label(self, label: Any, parent_name: Optional[str] = None):
-        """Recursively traverse the assembly hierarchy."""
-        if self._shape_tool is None:
-            return
-
-        current_label_name = self._get_label_name(label)
-        
-        # Naming Inheritance Logic
-        # If current label is generic or unnamed, we might need parent name
-        # Target format: {Parent}_{Body} if body is generic
-        is_generic = not current_label_name or self._is_generic_name(current_label_name)
-        
-        if is_generic and parent_name:
-            if current_label_name and not self._is_super_generic(current_label_name):
-                effective_name = f"{parent_name}_{current_label_name}"
-            else:
-                effective_name = parent_name
-        else:
-            effective_name = current_label_name or "Unnamed Part"
-
-        # Handle Assembly
-        if self._shape_tool.IsAssembly(label):
-            components = TDF_LabelSequence()
-            self._shape_tool.GetComponents(label, components)
-            for i in range(components.Length()):
-                self._traverse_label(components.Value(i+1), parent_name=effective_name)
-            return
-
-        # Handle Reference
-        if self._shape_tool.IsReference(label):
-            referred_label = TDF_Label()
-            if self._shape_tool.GetReferredShape(label, referred_label):
-                self._traverse_label(referred_label, parent_name=effective_name)
-                return
-
-        # Handle Geometry Shape (Compounds, CompSolids, Solids, Shells)
-        shape = self._shape_tool.GetShape(label)
-        if not shape.IsNull():
-            solids = self._extract_solids(shape)
-            if solids:
-                for solid in solids:
-                    try:
-                        part_data = self._analyze_geometry(solid, effective_name)
-                        self.parts.append(part_data)
-                    except Exception as e:
-                        msg = f"Geometry error for '{effective_name}': {e}"
-                        logger.warning(msg)
-                        self.warnings.append(msg)
-            else:
-                # Check for open shells (surfaces)
-                shell_exp = TopExp_Explorer(shape, TopAbs_SHELL)
-                if shell_exp.More():
-                    self.warnings.append(
-                        f"Entité '{effective_name}' contient des surfaces ouvertes (pas de corps solide fermé). "
-                        "Vérifiez dans votre logiciel CAD que vos corps sont bien de type 'Solid' et fermés."
-                    )
-                else:
-                    self.warnings.append(f"Ignored non-solid entity '{effective_name}' (Type: {shape.ShapeType()})")
-
-    def _extract_solids(self, shape) -> List[Any]:
-        """Explore récursivement le shape pour trouver TOUS les solides,
-        même imbriqués dans des compounds/assemblages."""
-        solids = []
-        explorer = TopExp_Explorer(shape, TopAbs_SOLID)
-        while explorer.More():
-            solids.append(topods.Solid(explorer.Current()))
-            explorer.Next()
-        return solids
-
-    def _get_label_name(self, label: Any) -> Optional[str]:
-        """Extract Name attribute from label."""
-        try:
-            it = TDF_AttributeIterator(label)
-            while it.More():
-                attr = it.Value()
-                if attr.ID() == TDataStd_Name.GetID():
-                    name_attr = TDataStd_Name.DownCast(attr)
-                    tstr = name_attr.Get()
-                    if hasattr(tstr, 'ToExtString'):
-                        return str(tstr.ToExtString())
-                    return str(tstr)
-                it.Next()
-        except:
-            pass
-        return None
-
-    def _is_generic_name(self, name: str) -> bool:
-        """Check if a name is likely a default generator name."""
-        name_clean = name.split(':')[0].strip()
-        for gen in self.GENERIC_NAMES:
-            if name_clean.startswith(gen) and (len(name_clean) == len(gen) or name_clean[len(gen):].isdigit()):
-                return True
-        return False
-
-    def _is_super_generic(self, name: str) -> bool:
-        """Check if name is extremely generic like 'Solid' or 'Body' without numbers."""
-        return name.lower() in {"solid", "body", "part", "component"}
-
-    def _analyze_geometry(self, shape, name: str) -> Dict[str, Any]:
-        """Extract bounding box, statistical thickness, 2D contour and machining features."""
-        if self._analyzer is not None:
-            analysis = self._analyzer.analyze_solid(shape)
-            if analysis.get("warnings"):
-                for w in analysis["warnings"]:
-                    self.warnings.append(f"{name}: {w}")
-            return {
-                "nom": name,
-                "longueur": analysis["length"],
-                "largeur": analysis["width"],
-                "epaisseur": analysis["thickness"],
-                "thickness_confidence": analysis["thickness_confidence"],
-                "thickness_method": analysis["thickness_method"],
-                "shape_type": analysis["shape_type"],
-                "contour_2d": analysis["contour_2d"],
-                "machining_features": analysis["machining_features"],
-                "original_dimensions": {
-                    "x": analysis["length"],
-                    "y": analysis["width"],
-                    "z": analysis["thickness"]
-                },
-                "volume_mm3": analysis["volume_mm3"],
-                "obb_center": analysis["obb_center"],
-                "volume_accuracy_percent": 100.0,
-                "extraction_method": f"OBB-STAT ({analysis['thickness_method']})",
-                "warnings": analysis["warnings"]
-            }
-
-        # Fallback si PieceGeometryAnalyzer non disponible
-        obb = Bnd_OBB()
-        brepbndlib.AddOBB(shape, obb, True, True, True)
-
-        if obb.IsVoid():
-            raise ValueError("Calculated OBB is void")
-
-        half_x, half_y, half_z = obb.XHSize(), obb.YHSize(), obb.ZHSize()
-        raw_dims = [round(2 * half_x, 2), round(2 * half_y, 2), round(2 * half_z, 2)]
-        
-        sorted_dims = sorted(raw_dims)
-        thickness, width, length = sorted_dims
-
-        props = GProp_GProps()
-        brepgprop.VolumeProperties(shape, props)
-        volume = props.Mass()
-
-        return {
-            "nom": name,
-            "longueur": length,
-            "largeur": width,
-            "epaisseur": thickness,
-            "thickness_confidence": None,
-            "thickness_method": "obb_fallback",
-            "shape_type": "panneau_rectangulaire",
-            "contour_2d": None,
-            "machining_features": [],
-            "original_dimensions": {
-                "x": raw_dims[0],
-                "y": raw_dims[1],
-                "z": raw_dims[2]
-            },
-            "volume_mm3": round(volume, 2),
-            "obb_center": [obb.Center().X(), obb.Center().Y(), obb.Center().Z()],
-            "volume_accuracy_percent": 100.0,
-            "extraction_method": "OBB-XDE",
-            "warnings": []
-        }
-
     def _format_results(self) -> Dict[str, Any]:
-        """Group parts and add metadata for API compatibility."""
+        """Formatte et structure les résultats attendus."""
         grouped: Dict[Tuple[float, float, float, str], Dict[str, Any]] = {}
         for p in self.parts:
             key = (p["epaisseur"], p["largeur"], p["longueur"], p["nom"])
@@ -349,24 +182,26 @@ class StepParser:
             else:
                 grouped[key]["quantite"] += 1
 
-        parts_list = list(grouped.values())
-
-        # Metadata expected by step_import.py
         metadata = {
             "filename": self.filepath.name,
             "timestamp": datetime.now().isoformat(),
             "total_parts": len(self.parts),
             "unit": "mm",
-            "parser_version": self.VERSION
+            "parser_version": self.VERSION,
         }
 
-        # Structure expected by step_import.py
         return {
-            "parts": self.parts,     # Raw parts for step_import.py loop
-            "grouped": grouped,      # Compatibility with existing logic if needed
+            "solids_count": len(self.pieces),
+            "names_source": self.names_source,
+            "pieces": self.pieces,
+            "global_warnings": self.global_warnings,
+            # Rétrocompatibilité avec step_import.py existant
+            "parts": self.parts,
+            "grouped": grouped,
             "metadata": metadata,
-            "warnings": self.warnings
+            "warnings": self.global_warnings,
         }
+
 
 class StepExtractor(StepParser):
     """Alias for backward compatibility."""

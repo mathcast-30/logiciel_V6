@@ -47,8 +47,10 @@ def _ensure_part_geometry_columns():
             existing_cols = {row[1] for row in res}
             
             new_cols = [
+                ("component_name", "VARCHAR"),
+                ("names_source", "VARCHAR"),
                 ("thickness_confidence", "FLOAT"),
-                ("shape_type", "VARCHAR"),
+                ("thickness_method", "VARCHAR"),
                 ("contour_2d_json", "TEXT"),
                 ("machining_features_json", "TEXT"),
                 ("extraction_warnings_json", "TEXT"),

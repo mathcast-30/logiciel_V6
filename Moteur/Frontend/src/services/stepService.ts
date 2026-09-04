@@ -4,14 +4,17 @@
 import api from './api';
 
 export interface MachiningFeature {
-    type: 'percage' | 'rainure' | 'mortaise_ou_poche' | string;
+    type: 'percage' | 'rainure' | 'mortaise_ou_poche' | (string & {});
     bbox_width: number;
     bbox_height: number;
     position_center: [number, number];
+    depth?: number | null;
 }
 
 export interface ExtractedPart {
     name: string;
+    component_name?: string;
+    names_source?: 'fusion_xcaf' | 'generic_fallback' | (string & {});
     thickness: number;
     width: number;
     length: number;
@@ -25,7 +28,6 @@ export interface ExtractedPart {
     original_name: string;
     thickness_confidence?: number | null;
     thickness_method?: string;
-    shape_type?: string;
     contour_2d?: [number, number][] | null;
     machining_features?: MachiningFeature[];
     warnings?: string[];
@@ -35,6 +37,7 @@ export interface StepImportResponse {
     step_model_id: number;
     filename: string;
     parts: ExtractedPart[];
+    names_source?: string;
     metadata: {
         total_parts: number;
         total_volume_mm3?: number;
@@ -45,7 +48,6 @@ export interface StepImportResponse {
     };
     warnings?: string[];
     has_low_confidence_pieces?: boolean;
-    has_non_convex_pieces?: boolean;
 }
 
 export interface StepModel {
