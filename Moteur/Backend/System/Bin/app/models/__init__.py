@@ -272,8 +272,10 @@ class Part(Base):
     step_model_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("step_models.id"), nullable=True)
     auto_extracted: Mapped[bool] = mapped_column(Boolean, default=False)  # True if extracted from STEP
     extraction_metadata: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON OBB data
+    component_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    names_source: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     thickness_confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    shape_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    thickness_method: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     contour_2d_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     machining_features_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     extraction_warnings_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
