@@ -99,13 +99,30 @@ class PieceGeometryAnalyzer:
 
         warnings = []
 
-        # --- 1. Dimensions rectangulaires : TOUJOURS via OBB -----------
-        # C'est la seule source de vérité pour length/width. Aucune autre
-        # logique dans ce fichier ne doit pouvoir les modifier.
-        obb = self.compute_obb_dimensions(solid)
-        length = obb["length"]
-        width = obb["width"]
-        thickness = obb["thickness_obb"]
+        # --- 1. Dimensions rectangulaires : TOUJOURS via OBB, avec filet --
+        # C'est la seule source de vérité pour length/width. Protégé par un
+        # try/except avec repli sur une AABB brute (non orientée, mais
+        # garantie de fonctionner même sur une géométrie dégénérée/courbe
+        # complexe) : AUCUNE pièce ne doit disparaître silencieusement de
+        # l'import faute de pouvoir calculer une OBB parfaite.
+        try:
+            obb = self.compute_obb_dimensions(solid)
+            length = obb["length"]
+            width = obb["width"]
+            thickness = obb["thickness_obb"]
+            obb_center = obb["center"]
+        except Exception as exc:
+            warnings.append(
+                f"Calcul OBB précis impossible ({exc}) : dimensions basées sur "
+                f"une boîte englobante simple (AABB), moins précise si la pièce "
+                f"est orientée obliquement — vérifiez manuellement si besoin."
+            )
+            fallback = self._compute_raw_aabb(solid)
+            length = fallback["length"]
+            width = fallback["width"]
+            thickness = fallback["thickness_obb"]
+            obb_center = fallback["center"]
+
         thickness_confidence = None
         thickness_method = "obb"
 
@@ -161,7 +178,7 @@ class PieceGeometryAnalyzer:
             "thickness_method": thickness_method,
             "contour_2d": contour_2d,
             "machining_features": machining_features,
-            "obb_center": obb["center"],
+            "obb_center": obb_center,
             "warnings": warnings,
         }
 
@@ -188,6 +205,33 @@ class PieceGeometryAnalyzer:
                 round(obb.Center().X(), 2),
                 round(obb.Center().Y(), 2),
                 round(obb.Center().Z(), 2),
+            ),
+        }
+
+    def _compute_raw_aabb(self, solid) -> dict:
+        """Dernier recours ABSOLU si le calcul OBB lui-même échoue (géométrie
+        très complexe/dégénérée, échec de triangulation...). Une AABB simple
+        (axis-aligned, alignée sur les axes du fichier, pas orientée sur la
+        pièce) est beaucoup plus robuste et échoue quasiment jamais. Moins
+        précise si la pièce est inclinée dans le fichier, mais garantit que
+        la pièce apparaît quand même dans l'import avec un rectangle
+        exploitable plutôt que de disparaître silencieusement."""
+        from OCC.Core.Bnd import Bnd_Box
+        from OCC.Core.BRepBndLib import brepbndlib as _brepbndlib
+
+        box = Bnd_Box()
+        _brepbndlib.Add(solid, box, True)
+        xmin, ymin, zmin, xmax, ymax, zmax = box.Get()
+
+        dims = sorted([xmax - xmin, ymax - ymin, zmax - zmin], reverse=True)
+        return {
+            "length": round(dims[0], 2),
+            "width": round(dims[1], 2),
+            "thickness_obb": round(dims[2], 2),
+            "center": (
+                round((xmin + xmax) / 2, 2),
+                round((ymin + ymax) / 2, 2),
+                round((zmin + zmax) / 2, 2),
             ),
         }
 
