@@ -3,8 +3,9 @@
 step_name_extractor.py
 ========================
 
-Lit un fichier STEP via STEPCAFControl_Reader pour récupérer la géométrie
-et les NOMS réels des composants et corps définis dans Fusion 360 (ou tout autre CAO).
+Lit un fichier STEP via STEPCAFControl_Reader (au lieu de STEPControl_Reader)
+pour récupérer, en plus de la géométrie, les NOMS de composants/corps tels que
+définis dans Fusion 360 (ou tout autre CAD respectant la structure produit STEP).
 
 Active le paramètre OCCT 'read.stepcaf.subshapes.name' pour extraire les noms
 individuels des corps lorsque plusieurs corps vivent sous un même composant ou à la racine,
@@ -12,16 +13,17 @@ et résout les noms via shape_tool.FindSubShape() et FindShape().
 """
 
 import logging
+import re
 
 from OCC.Core.STEPCAFControl import STEPCAFControl_Reader, STEPCAFControl_Controller
 from OCC.Core.STEPControl import STEPControl_Reader
 from OCC.Core.TDocStd import TDocStd_Document
 from OCC.Core.XCAFApp import XCAFApp_Application
 from OCC.Core.XCAFDoc import XCAFDoc_DocumentTool
-from OCC.Core.TDF import TDF_LabelSequence, TDF_Label
+from OCC.Core.TDF import TDF_LabelSequence, TDF_Label, TDF_AttributeIterator
 from OCC.Core.TDataStd import TDataStd_Name
-from OCC.Core.Interface import Interface_Static
 from OCC.Core.IFSelect import IFSelect_RetDone
+from OCC.Core.Interface import Interface_Static
 from OCC.Core.TopExp import TopExp_Explorer
 from OCC.Core.TopAbs import TopAbs_SOLID
 from OCC.Core.TopoDS import topods
@@ -29,25 +31,39 @@ from OCC.Core.TopoDS import topods
 logger = logging.getLogger("StepNameExtractor")
 
 
-def _init_occt_step_reader_params():
-    """Active la lecture des noms de sous-formes dans OCCT."""
-    try:
-        STEPCAFControl_Controller.Init()
-        Interface_Static.SetIVal("read.stepcaf.subshapes.name", 1)
-    except Exception as e:
-        logger.warning(f"Impossible de configurer read.stepcaf.subshapes.name : {e}")
-
-
 def _label_name(label: "TDF_Label") -> str:
-    """Récupère le nom stocké sur un label XCAF, ou une chaîne vide si absent."""
+    """Récupère le nom stocké sur un label XCAF, ou une chaîne vide si absent.
+    Compatible avec toutes les versions de pythonocc-core (y compris 7.8+)."""
+    if label is None:
+        return ""
     try:
-        if hasattr(label, "GetLabelName"):
-            name = label.GetLabelName()
-            if name:
-                return str(name).strip()
+        if label.IsNull():
+            return ""
     except Exception:
         pass
 
+    # 1. Méthode universelle via TDF_AttributeIterator + Dump() (très fiable sur pythonocc 7.8+)
+    try:
+        it = TDF_AttributeIterator(label)
+        while it.More():
+            attr = it.Value()
+            if hasattr(attr, "DynamicType") and attr.DynamicType().Name() == "TDataStd_Name":
+                try:
+                    name_obj = TDataStd_Name.DownCast(attr)
+                    res = name_obj.Dump()
+                    text = res[1] if isinstance(res, tuple) and len(res) > 1 else str(res)
+                    m = re.search(r"Name=\|([^|]*)\|", text)
+                    if m:
+                        val = m.group(1).strip()
+                        if val:
+                            return val
+                except Exception:
+                    pass
+            it.Next()
+    except Exception:
+        pass
+
+    # 2. Méthode classique FindAttribute (anciennes versions de pythonocc-core)
     try:
         name_attr = TDataStd_Name()
         if label.FindAttribute(TDataStd_Name.GetID(), name_attr):
@@ -59,12 +75,22 @@ def _label_name(label: "TDF_Label") -> str:
     except Exception:
         pass
 
+    # 3. Méthode GetLabelName si disponible
+    try:
+        if hasattr(label, "GetLabelName"):
+            name = label.GetLabelName()
+            if name:
+                return str(name).strip()
+    except Exception:
+        pass
+
     return ""
 
 
 def _walk_components(shape_tool, label: "TDF_Label", inherited_name: str, results: list):
-    """Parcourt récursivement l'arborescence XCAF (composants et sous-assemblages)
-    et extrait chaque solide avec son nom individuel le plus précis."""
+    """Parcourt récursivement l'arborescence XCAF (composants et
+    sous-assemblages) et collecte, pour chaque forme feuille, son nom, son
+    TopoDS_Shape et son label."""
     name = _label_name(label) or inherited_name
 
     if shape_tool.IsAssembly(label):
@@ -72,8 +98,8 @@ def _walk_components(shape_tool, label: "TDF_Label", inherited_name: str, result
         shape_tool.GetComponents(label, components)
         for i in range(1, components.Length() + 1):
             comp_label = components.Value(i)
-            ref_label = TDF_Label()
             comp_name = _label_name(comp_label) or name
+            ref_label = TDF_Label()
             if shape_tool.GetReferredShape(comp_label, ref_label):
                 _walk_components(shape_tool, ref_label, comp_name, results)
             else:
@@ -81,44 +107,65 @@ def _walk_components(shape_tool, label: "TDF_Label", inherited_name: str, result
     else:
         shape = shape_tool.GetShape(label)
         if shape is not None and not shape.IsNull():
-            explorer = TopExp_Explorer(shape, TopAbs_SOLID)
-            local_solids = []
-            while explorer.More():
-                solid = topods.Solid(explorer.Current())
-                
-                # 1. Résolution de nom individuel par sous-forme (corps Fusion 360 sous un composant)
-                solid_name = ""
-                sub_label = TDF_Label()
-                if shape_tool.FindSubShape(label, solid, sub_label):
-                    solid_name = _label_name(sub_label)
-                
-                # 2. Complément via FindShape si non trouvé
-                if not solid_name and shape_tool.FindShape(solid, sub_label):
-                    solid_name = _label_name(sub_label)
-                
-                local_solids.append((solid, solid_name))
-                explorer.Next()
+            results.append({"name": name, "shape": shape, "label": label})
 
-            if len(local_solids) == 1:
-                solid, solid_name = local_solids[0]
-                final_name = solid_name or name or "Piece"
-                results.append({"name": final_name, "solid": solid})
-            else:
-                for idx, (solid, solid_name) in enumerate(local_solids, start=1):
-                    final_name = solid_name or (f"{name}_{idx}" if name else f"Piece_{idx}")
-                    results.append({"name": final_name, "solid": solid})
+
+def _find_subshape_name(shape_tool, comp_label: "TDF_Label", solid) -> str:
+    """Tente de retrouver le nom individuel d'un solide en le cherchant
+    comme sous-shape dans l'arbre XCAF (utile quand plusieurs corps nommés
+    Fusion 360 vivent sous un seul composant). Retourne une chaîne vide si
+    aucun nom spécifique n'est trouvé (ne lève jamais d'exception : c'est un
+    best-effort, le nom de repli du composant parent prend le relais)."""
+    try:
+        sub_label = TDF_Label()
+        if comp_label is not None:
+            try:
+                if not comp_label.IsNull() and shape_tool.FindSubShape(comp_label, solid, sub_label):
+                    name = _label_name(sub_label)
+                    if name:
+                        return name
+            except Exception:
+                pass
+
+        if shape_tool.FindShape(solid, sub_label):
+            name = _label_name(sub_label)
+            if name:
+                return name
+    except Exception as exc:
+        logger.debug(f"Résolution du nom individuel du solide échouée (best-effort) : {exc}")
+    return ""
 
 
 def extract_named_solids(filepath: str) -> list:
     """
     Lit un fichier STEP et retourne une liste de dicts :
         {"name": "NomDuComposantFusion", "solid": <TopoDS_Solid>}
-    """
-    _init_occt_step_reader_params()
 
+    Un composant peut contenir plusieurs solides (ex: un corps avec des
+    trous non fusionnés, ou un composant multi-corps Fusion 360 où plusieurs
+    "Bodies" nommés vivent sous un seul "Component"). Dans ce cas, on tente
+    de récupérer le nom individuel de CHAQUE solide via une résolution de
+    sous-shape dans l'arbre XCAF (shape_tool.FindSubShape) — sans ce fix,
+    OpenCASCADE ne remonte par défaut que le nom du composant parent, et
+    tous les corps qu'il contient héritent du même nom avec juste un
+    suffixe numérique (bug observé : "MonProjet_1", "MonProjet_2"... au
+    lieu des vrais noms de corps Fusion 360).
+
+    Si un solide n'a aucun nom individuel trouvable, le nom du composant
+    parent est utilisé en repli, avec suffixe numérique si plusieurs
+    solides du même composant sont dans ce cas.
+    """
     app = XCAFApp_Application.GetApplication()
     doc = TDocStd_Document("XmlXCAF")
     app.NewDocument("MDTV-XCAF", doc)
+
+    # Sans ce paramètre, OCCT ne récupère les noms qu'au niveau composant
+    # (occurrence dans l'assemblage), pas au niveau solide/sous-shape.
+    try:
+        STEPCAFControl_Controller.Init()
+    except Exception:
+        pass
+    Interface_Static.SetIVal("read.stepcaf.subshapes.name", 1)
 
     reader = STEPCAFControl_Reader()
     reader.SetNameMode(True)
@@ -137,10 +184,43 @@ def extract_named_solids(filepath: str) -> list:
     free_shapes = TDF_LabelSequence()
     shape_tool.GetFreeShapes(free_shapes)
 
-    named_solids = []
+    named_components = []
     for i in range(1, free_shapes.Length() + 1):
         label = free_shapes.Value(i)
-        _walk_components(shape_tool, label, "", named_solids)
+        _walk_components(shape_tool, label, "", named_components)
+
+    # Éclatement de chaque composant nommé en solides individuels, avec
+    # tentative de résolution du nom individuel par solide.
+    named_solids = []
+    unnamed_counter = 1
+    for component in named_components:
+        base_name = component["name"].strip()
+        comp_label = component.get("label")
+        if not base_name:
+            base_name = f"Piece_sans_nom_{unnamed_counter}"
+            unnamed_counter += 1
+
+        explorer = TopExp_Explorer(component["shape"], TopAbs_SOLID)
+        solids_in_component = []
+        while explorer.More():
+            solids_in_component.append(topods.Solid(explorer.Current()))
+            explorer.Next()
+
+        if len(solids_in_component) == 1:
+            individual_name = _find_subshape_name(shape_tool, comp_label, solids_in_component[0])
+            final_name = individual_name or base_name
+            named_solids.append({"name": final_name, "solid": solids_in_component[0]})
+            continue
+
+        # Plusieurs solides dans ce composant : on essaie de trouver le nom
+        # individuel de chacun via l'arbre XCAF avant de retomber sur le
+        # suffixe numérique générique.
+        for idx, solid in enumerate(solids_in_component, start=1):
+            individual_name = _find_subshape_name(shape_tool, comp_label, solid)
+            if individual_name:
+                named_solids.append({"name": individual_name, "solid": solid})
+            else:
+                named_solids.append({"name": f"{base_name}_{idx}", "solid": solid})
 
     return named_solids
 
@@ -150,7 +230,8 @@ def extract_named_solids(filepath: str) -> list:
 # ---------------------------------------------------------------------------
 
 def _extract_all_solids_plain(shape) -> list:
-    """Explore récursivement un shape pour trouver tous les TopoDS_Solid."""
+    """Explore récursivement un shape pour trouver tous les TopoDS_Solid,
+    même imbriqués dans des compounds/assemblages."""
     solids = []
     explorer = TopExp_Explorer(shape, TopAbs_SOLID)
     while explorer.More():
@@ -161,7 +242,10 @@ def _extract_all_solids_plain(shape) -> list:
 
 def _extract_solids_without_names(filepath: str) -> list:
     """Voie de repli : lecture géométrique classique (STEPControl_Reader),
-    sans structure produit."""
+    sans structure produit. Utilisée quand la lecture XCAF échoue (fichier
+    sans structure produit exploitable, export non-Fusion, fichier ancien...).
+    Retourne le même format que extract_named_solids(), avec des noms
+    génériques "Piece_1", "Piece_2"..."""
     reader = STEPControl_Reader()
     status = reader.ReadFile(filepath)
     if status != IFSelect_RetDone:
@@ -185,6 +269,12 @@ def extract_named_solids_safe(filepath: str) -> dict:
     """
     Point d'entrée recommandé pour step_parser.py.
 
+    Essaie d'abord la lecture avec noms (XCAF/STEPCAFControl_Reader). Si ça
+    échoue pour n'importe quelle raison (fichier sans structure produit,
+    erreur de lecture CAF, bug pythonocc sur un fichier particulier...),
+    retombe automatiquement sur la lecture géométrique classique avec des
+    noms génériques, plutôt que de faire planter tout l'import.
+
     Retourne un dict :
         {
             "solids": [{"name": str, "solid": TopoDS_Solid}, ...],
@@ -206,35 +296,41 @@ def extract_named_solids_safe(filepath: str) -> dict:
             f"Lecture XCAF (noms de composants) échouée pour '{filepath}' : {exc}. "
             f"Repli sur la lecture géométrique classique avec noms génériques."
         )
-        fallback_solids = _extract_solids_without_names(filepath)
-        return {
-            "solids": fallback_solids,
-            "names_source": "generic_fallback",
-            "warning": (
-                "Les noms de composants Fusion 360 n'ont pas pu être récupérés "
-                "pour ce fichier (structure produit absente ou illisible). "
-                "Des noms génériques ont été attribués (Piece_1, Piece_2, ...)."
-            ),
-        }
+        try:
+            plain_solids = _extract_solids_without_names(filepath)
+            return {
+                "solids": plain_solids,
+                "names_source": "generic_fallback",
+                "warning": (
+                    "Les noms de composants Fusion 360 n'ont pas pu être récupérés "
+                    "pour ce fichier (structure produit absente ou illisible). "
+                    "Des noms génériques ont été attribués (Piece_1, Piece_2, ...)."
+                ),
+            }
+        except Exception as fallback_exc:
+            raise ValueError(
+                f"Échec complet de la lecture du fichier STEP (XCAF: {exc} | Repli: {fallback_exc})"
+            ) from fallback_exc
 
 
 # ---------------------------------------------------------------------------
-# Script de test à lancer
+# Test en ligne de commande autonome
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     import sys
 
     if len(sys.argv) < 2:
-        print("Usage : python step_name_extractor.py chemin_vers_fichier.step")
+        print("Usage: python step_name_extractor.py <fichier.step>")
         sys.exit(1)
 
     logging.basicConfig(level=logging.INFO)
+    path = sys.argv[1]
+    result = extract_named_solids_safe(path)
 
-    result = extract_named_solids_safe(sys.argv[1])
     print(f"Source des noms : {result['names_source']}")
     if result["warning"]:
         print(f"Avertissement : {result['warning']}")
     print(f"{len(result['solids'])} solide(s) trouvé(s) :\n")
-    for r in result["solids"]:
-        print(f"  - {r['name']}")
+    for item in result["solids"]:
+        print(f"  - {item['name']}")
