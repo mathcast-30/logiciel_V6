@@ -144,8 +144,18 @@ Exemples de commandes :
 - Ports occupés → STOP_OPTICUT.bat ou changer BACKEND_PORT/FRONTEND_PORT dans LANCER_LOGICIEL.bat.
 - Import STEP échoue → installer pythonocc-core dans opticut_pro.
 
-15) Licence
-- Pas de licence par défaut dans le dépôt initial. Si tu veux, j'ajoute MIT (je peux le faire ou tu fournis une autre licence).
+15) 🔐 Sécurité & Données Utilisateur
+- **Principe fondamental** : Le code est partagé, les données sont locales et isolées pour chaque utilisateur.
+- Emplacement des données : `%APPDATA%\OptiCutPro\` (Windows), `~/Library/Application Support/OptiCutPro/` (Mac) ou `~/.config/OptiCutPro/` (Linux).
+- Au premier lancement, une base `opticut.db` vierge et un `.env` contenant une clé JWT cryptographique unique (`JWT_SECRET_KEY`) sont créés automatiquement.
+- Pour générer manuellement une clé JWT :
+  ```bash
+  python -c "import secrets; print(secrets.token_hex(32))"
+  ```
+- Les fichiers de données, sauvegardes, bases SQLite et `.env` sont strictement exclus du suivi Git via `.gitignore`.
+
+16) Licence
+- Licence propriétaire / interne.
 
 ---
 
