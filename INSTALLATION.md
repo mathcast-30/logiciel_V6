@@ -75,3 +75,26 @@ Les moteurs d'OptiCut utilisent des canaux de communication invisibles (les port
 ### Le navigateur s'est ouvert mais la page est blanche ou indique une erreur ?
 Cela signifie simplement que le navigateur s'est ouvert une ou deux secondes trop tôt, avant que les moteurs du logiciel ne soient tout à fait prêts.
 👉 **Solution** : Patientez 3 secondes, puis cliquez sur le bouton **"Actualiser"** de votre navigateur (la flèche en forme de boucle en haut de l'écran, ou la touche `F5` de votre clavier). L'interface apparaîtra.
+
+---
+
+## 8. 🔐 Données Utilisateur & Sécurité
+
+### 📁 Emplacement de vos données personnelles
+OptiCut Pro sépare strictement le code du logiciel de vos données d'entreprise :
+- **Windows** : `%APPDATA%\OptiCutPro\` (ex: `C:\Users\VotreNom\AppData\Roaming\OptiCutPro\`)
+- **Mac** : `~/Library/Application Support/OptiCutPro/`
+- **Linux** : `~/.config/OptiCutPro/`
+
+Au premier lancement, le logiciel crée automatiquement :
+1. Une base de données vierge (`opticut.db`).
+2. Un fichier de configuration sécurisé `.env` avec une clé secrète JWT générée de façon cryptographique unique pour votre installation.
+3. Les répertoires de stockage pour vos optimisations, imports STEP et sauvegardes.
+
+### 💾 Sauvegarde de vos données
+- Sauvegardez régulièrement le dossier `OptiCutPro` situé dans votre `%APPDATA%`.
+- Pour restaurer vos données sur un nouvel ordinateur, il suffit de copier ce dossier dans le même emplacement.
+
+### 🔒 Confidentialité
+- Vos données restent 100% locales à votre ordinateur et ne sont jamais envoyées sur un serveur distant ou sur GitHub.
+

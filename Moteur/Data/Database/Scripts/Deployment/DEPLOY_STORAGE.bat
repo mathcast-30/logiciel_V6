@@ -8,7 +8,7 @@ set "BackupPath=C:\OptiCut_Backup"
 
 echo.
 echo ════════════════════════════════════════════════════════════════════
-echo   OptiCut Pro V4 - Deployment de l'Architecture de Stockage Avancee
+echo   OptiCut Pro V4 - Deploiement de l'Architecture de Stockage Avancee
 echo ════════════════════════════════════════════════════════════════════
 echo.
 
@@ -44,8 +44,19 @@ echo   [OK] PostgreSQL installe
 echo.
 echo [ETAPE 4/5] Configuration de la Base de Donnees...
 wsl sudo service postgresql start >nul 2>&1
+
+if "%PG_PASSWORD%"=="" (
+    set /p PG_PASSWORD=Entrez le mot de passe securise pour PostgreSQL (opticut_user): 
+)
+
+if "%PG_PASSWORD%"=="" (
+    echo [ERREUR] Le mot de passe ne peut pas etre vide.
+    pause
+    exit /b 1
+)
+
 echo   Creation de l'utilisateur opticut_user...
-wsl sudo -u postgres psql -c "CREATE USER opticut_user WITH PASSWORD 'SecureOpticut2024!#' CREATEDB;" >nul 2>&1
+wsl sudo -u postgres psql -c "CREATE USER opticut_user WITH PASSWORD '%PG_PASSWORD%' CREATEDB;" >nul 2>&1
 echo   Creation de la base opticut_pro...
 wsl sudo -u postgres psql -c "CREATE DATABASE opticut_pro OWNER opticut_user;" >nul 2>&1
 echo   [OK] Base de donnees configuree
@@ -59,7 +70,7 @@ echo   [OK] Schema et tables crees
 
 echo.
 echo ════════════════════════════════════════════════════════════════════
-echo   DEPLOYMENT REUSSI !
+echo   DEPLOIEMENT REUSSI !
 echo ════════════════════════════════════════════════════════════════════
 echo.
 echo   Informations de connexion:
@@ -67,7 +78,6 @@ echo   - Host: localhost (via WSL)
 echo   - Port: 5432
 echo   - Database: opticut_pro
 echo   - User: opticut_user
-echo   - Password: SecureOpticut2024!#
 echo.
 echo   Donnees: %DataPath%
 echo   Sauvegardes: %BackupPath%

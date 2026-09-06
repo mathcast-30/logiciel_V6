@@ -102,10 +102,9 @@ app = FastAPI(
 # CORS configuration
 # En mode .exe : le frontend est servi par uvicorn sur le port 8000 lui-même.
 # Les origines dev (5173, 3000) sont conservées pour ne pas casser le workflow de développement.
-cors_origins_env = os.getenv("CORS_ORIGINS")
-if cors_origins_env:
-    allow_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
-else:
+cors_origins_env = os.getenv("CORS_ORIGINS", "")
+if not cors_origins_env:
+    # En développement local uniquement
     allow_origins = [
         "http://localhost:8000",
         "http://127.0.0.1:8000",
@@ -114,6 +113,8 @@ else:
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
+else:
+    allow_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
 
 for required_origin in ["http://localhost:8000", "http://127.0.0.1:8000"]:
     if required_origin not in allow_origins:

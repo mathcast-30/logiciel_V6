@@ -1,8 +1,6 @@
 """
 Initialisation SQLAlchemy — OptiCut Pro.
-
-Utilise get_data_dir() (app/core/config.py) pour tous les chemins persistants,
-ce qui garantit le bon fonctionnement en mode développement ET en mode .exe PyInstaller.
+Utilise ensure_data_structure() pour garantir que UserData existe.
 """
 from __future__ import annotations
 import logging
@@ -13,22 +11,21 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-# --- 1. Charger la configuration persistante en PREMIER ---
-# Cela doit se faire avant toute utilisation de os.getenv() liée à l'app.
-from ..core.config import ensure_env_file, get_data_dir
+# --- 1. S'assurer que la structure de données existe ---
+from ..core.config import ensure_data_structure, get_data_dir
 
-env_path = ensure_env_file()
+data_dir = ensure_data_structure()
+
+# --- 2. Charger la configuration ---
+env_path = data_dir / '.env'
 load_dotenv(dotenv_path=env_path)
 
-# --- 2. Résoudre les chemins de données ---
-data_dir = get_data_dir()
-
-db_dir    = data_dir / 'BaseDeDonnees'
+# --- 3. Résoudre les chemins ---
+db_dir = data_dir / 'BaseDeDonnees'
 optim_dir = data_dir / 'Optimisations'
 db_dir.mkdir(parents=True, exist_ok=True)
 optim_dir.mkdir(parents=True, exist_ok=True)
 
-# DB_PATH dans .env prend le dessus (cas migrations manuelles / tests)
 db_path_env = os.getenv('DB_PATH')
 if db_path_env:
     db_path = Path(db_path_env).resolve()
@@ -38,7 +35,7 @@ else:
 
 OPTIMIZATIONS_DIR = optim_dir
 
-# --- 3. Initialiser SQLAlchemy ---
+# --- 4. Initialiser SQLAlchemy ---
 print(f"[DATABASE] Fichier utilisé : {db_path}")
 print(f"[STORAGE]  Optimisations  : {OPTIMIZATIONS_DIR}")
 
@@ -57,7 +54,7 @@ class Base(DeclarativeBase):
     pass
 
 
-# --- 4. Dépendance FastAPI ---
+# --- 5. Dépendance FastAPI ---
 logger = logging.getLogger(__name__)
 
 
