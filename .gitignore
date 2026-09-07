@@ -25,13 +25,16 @@
 *.sqlite3
 *.bak
 *.db.bak
+*.zip
 
-# Emplacements spécifiques DB backend
+# Emplacements spécifiques DB backend et builds
 /Moteur/Backend/*.db
 /Moteur/Backend/*.sqlite
 /Moteur/Backend/*.sqlite3
 /Moteur/Backend/opticut*.db
 /Moteur/Backend/System/Bin/app.db
+dist_exe/
+/Moteur/Backend/dist_exe/
 
 # Clés de sécurité privées et certificats
 *.pem
