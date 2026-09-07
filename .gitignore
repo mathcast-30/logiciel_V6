@@ -40,6 +40,7 @@ dist_exe/
 *.pem
 *.key
 *.crt
+/Moteur/hmenuiserie/
 
 # Logs et rapports d'erreurs
 logs
