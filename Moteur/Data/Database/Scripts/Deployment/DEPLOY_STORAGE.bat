@@ -46,7 +46,7 @@ echo [ETAPE 4/5] Configuration de la Base de Donnees...
 wsl sudo service postgresql start >nul 2>&1
 
 if "%PG_PASSWORD%"=="" (
-    set /p PG_PASSWORD=Entrez le mot de passe securise pour PostgreSQL (opticut_user): 
+    for /f "usebackq delims=" %%p in (`powershell -Command "$p = Read-Host 'Entrez le mot de passe securise pour PostgreSQL (opticut_user)' -AsSecureString; [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($p))"`) do set "PG_PASSWORD=%%p"
 )
 
 if "%PG_PASSWORD%"=="" (
