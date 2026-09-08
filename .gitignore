@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # SÉCURITÉ : FICHIERS À NE JAMAIS COMMITER (DONNÉES UTILISATEUR)
 # =============================================================================
 /Moteur/UserData/
@@ -44,12 +44,10 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
-
 pids
 *.pid
 *.seed
 *.pid.lock
-
 node_modules/
 jspm_packages/
 web_modules/
@@ -57,24 +55,18 @@ web_modules/
 out
 .nuxt
 dist
-
 *.tsbuildinfo
-
 .npm
 .eslintcache
 .stylelintcache
-
 .rpt2_cache/
 .rts2_cache_cjs/
 .rts2_cache_es/
 .rts2_cache_umd/
-
 .cache
 .parcel-cache
-
 .yarn-integrity
 *.tgz
-
 .yarn/cache
 .yarn/unplugged
 .yarn/build-state.yml
