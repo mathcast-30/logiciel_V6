@@ -1,48 +1,42 @@
-# ==============================================================================
-# OPTICUT PRO - SÉCURITÉ & DONNÉES UTILISATEUR (NE JAMAIS COMMITER)
-# ==============================================================================
+# =============================================================================
+# SÉCURITÉ : FICHIERS À NE JAMAIS COMMITER (DONNÉES UTILISATEUR)
+# =============================================================================
+/Moteur/UserData/
+/Moteur/Backend/*.db
+/Moteur/Backend/*.sqlite
+/Moteur/Backend/*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.bak
+*.pem
+*.key
+*.crt
+/Moteur/hmenuiserie/
 
-# Fichiers d'environnement
+# =============================================================================
+# ENVIRONNEMENT
+# =============================================================================
 .env
 .env.*
 !.gitignore
 !.env.example
 !.env.docker.example
 
-# Données persistantes et sauvegardes utilisateurs
-/Moteur/UserData/
-/Moteur/UserData/*
-/UserData/
-/C:\OptiCut_Data/
-/C:\OptiCut_Backup/
+# =============================================================================
+# LOGS & CACHES
+# =============================================================================
+*.log
+server_log.txt
+__pycache__/
+*.pyc
+.DS_Store
 
-# Bases de données SQLite, WAL et archives
-*.db
-*.db-shm
-*.db-wal
-*.db.old
-*.sqlite
-*.sqlite3
-*.bak
-*.db.bak
-*.zip
-
-# Emplacements spécifiques DB backend et builds
-/Moteur/Backend/*.db
-/Moteur/Backend/*.sqlite
-/Moteur/Backend/*.sqlite3
-/Moteur/Backend/opticut*.db
-/Moteur/Backend/System/Bin/app.db
-dist_exe/
-/Moteur/Backend/dist_exe/
-
-# Clés de sécurité privées et certificats
-*.pem
-*.key
-*.crt
-/Moteur/hmenuiserie/
-
-# Logs et rapports d'erreurs
+# =============================================================================
+# NODE.JS (règles existantes)
+# =============================================================================
 logs
 *.log
 npm-debug.log*
@@ -50,78 +44,39 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
-server_log.txt
-/Moteur/Backend/System/Bin/server_log.txt
-/Moteur/Backend/System/Bin/alembic.ini
 
-# Python / PyInstaller / Virtualenv
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-.venv
-venv/
-ENV/
-env/
-/Moteur/Backend/System/Runtime/venv/
-/Moteur/Backend/System/Tools/System/Runtime/venv/
-*.spec
-
-# Tests & Caches
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
-.hypothesis/
-.cache
-.parcel-cache
-
-# Node / JS
-node_modules/
-jspm_packages/
-web_modules/
-*.tsbuildinfo
-.npm
-.eslintcache
-.stylelintcache
-*.tgz
-.yarn-integrity
-.yarn/cache
-.yarn/unplugged
-.yarn/build-state.yml
-.yarn/install-state.gz
-.pnp.*
-
-# Diagnostic reports
-report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 pids
 *.pid
 *.seed
 *.pid.lock
 
-# IDE & History
-.history/
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+node_modules/
+jspm_packages/
+web_modules/
+.next
+out
+.nuxt
+dist
+
+*.tsbuildinfo
+
+.npm
+.eslintcache
+.stylelintcache
+
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+.cache
+.parcel-cache
+
+.yarn-integrity
+*.tgz
+
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
