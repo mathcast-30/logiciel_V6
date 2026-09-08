@@ -217,9 +217,18 @@ app.include_router(users.router, prefix="/api", tags=["users"], dependencies=[De
 async def startup_event():
     """Triggered when the backend starts."""
     from .db.database import db_path
+    from .db.integrity_check import check_database_integrity
 
-    # Run Alembic migrations here (not at module-level) to avoid SQLite
-    # connection conflicts: the app engine is fully ready at this point.
+    # 1. Vérification de l'intégrité SQLite
+    is_healthy, integrity_msg = check_database_integrity(db_path)
+    if not is_healthy:
+        log_error("Database", "IntegrityCheck", f"ALERTE CORRUPTION SQLITE: {integrity_msg}")
+        print(f"\n[CRITICAL WARNING] Base de données SQLite corrompue : {integrity_msg}\n")
+    else:
+        log_info("Database", "IntegrityCheck", "Intégrité de la base de données validée (PRAGMA integrity_check: ok).")
+        print("[OK] Base de données intègre.")
+
+    # 2. Run Alembic migrations (tables & structures)
     run_db_migrations()
 
     log_info("System", "Main", "🚀 OptiCut Pro Backend (V4.2) est opérationnel.")
@@ -241,6 +250,20 @@ async def startup_event():
         log_error("Diagnostic", "Dependencies", f"ERREUR CRITIQUE: Shapely introuvable. Moteur 'Massif' indisponible. ({e})")
 
 
+@app.on_event("shutdown")
+def shutdown_event():
+    """Sauvegarde automatique à la fermeture propre du serveur."""
+    try:
+        from IA_Engine.backup import get_backup_manager
+        manager = get_backup_manager()
+        backup_file = manager.create_backup(is_auto=True, notes="Sauvegarde automatique à la fermeture")
+        print(f"[BACKUP] Sauvegarde automatique créée : {backup_file}")
+        log_info("System", "Backup", f"Sauvegarde automatique créée : {backup_file}")
+    except Exception as e:
+        print(f"[BACKUP ERROR] Impossible de créer la sauvegarde à l'arrêt : {e}")
+        log_error("System", "Backup", f"Erreur sauvegarde à la fermeture : {e}", e)
+
+
 @app.get("/api/status")
 def status_check():
     """Detailed status & info check endpoint."""
@@ -259,12 +282,22 @@ def api_shutdown(background_tasks: BackgroundTasks):
     """
     log_info("System", "Shutdown", "Arrêt demandé via /api/shutdown.")
     
+    # Création explicite de la sauvegarde avant fermeture
+    try:
+        from IA_Engine.backup import get_backup_manager
+        manager = get_backup_manager()
+        backup_file = manager.create_backup(is_auto=True, notes="Sauvegarde automatique lors de l'arrêt via API")
+        log_info("System", "Shutdown", f"Sauvegarde créée avec succès : {backup_file}")
+    except Exception as e:
+        log_error("System", "Shutdown", f"Erreur sauvegarde pré-extinction : {e}", e)
+
     def delayed_exit():
         time.sleep(1.0)
         os._exit(0)
         
     background_tasks.add_task(delayed_exit)
-    return {"status": "shutting_down", "message": "Arrêt propre du serveur en cours..."}
+    return {"status": "shutting_down", "message": "Sauvegarde effectuée. Arrêt propre du serveur en cours..."}
+
 
 
 # Serve React Frontend
