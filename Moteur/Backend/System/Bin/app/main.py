@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request, Depends, BackgroundTasks
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 import uvicorn
@@ -188,8 +188,78 @@ app.mount("/api/files", StaticFiles(directory=str(OPTIMIZATIONS_DIR)), name="exp
 @app.get("/loading.html", include_in_schema=False)
 async def loading_page():
     """Serve loading.html via HTTP so fetch() has the correct origin (not file://)."""
-    loading_path = Path(__file__).resolve().parents[4] / "UserData" / "loading.html"
-    return FileResponse(str(loading_path), media_type="text/html")
+    candidates = [
+        Path(__file__).resolve().parents[4] / "UserData" / "loading.html",
+        backend_dir.parent / "UserData" / "loading.html",
+        Path.cwd() / "Moteur" / "UserData" / "loading.html",
+        Path.cwd() / "UserData" / "loading.html",
+    ]
+    if getattr(sys, 'frozen', False):
+        candidates.insert(0, Path(sys._MEIPASS) / "UserData" / "loading.html")  # type: ignore[attr-defined]
+
+    for candidate in candidates:
+        if candidate.exists() and candidate.is_file():
+            return FileResponse(str(candidate), media_type="text/html")
+
+    # Fallback to inline HTML if loading.html is not found on disk
+    fallback_html = """<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OptiCut Pro - Chargement</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            flex-direction: column;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        h1 { font-size: 24px; margin: 0; }
+        p { color: #aaaaaa; }
+    </style>
+</head>
+<body>
+    <div class="spinner"></div>
+    <h1>OptiCut Pro</h1>
+    <p>Chargement en cours...</p>
+    <script>
+        function checkBackend() {
+            fetch('/health')
+                .then(function(resp) {
+                    if (resp.ok) {
+                        window.location.href = '/';
+                    } else {
+                        setTimeout(checkBackend, 1000);
+                    }
+                })
+                .catch(function() {
+                    setTimeout(checkBackend, 1000);
+                });
+        }
+        setTimeout(checkBackend, 1000);
+    </script>
+</body>
+</html>"""
+    return HTMLResponse(content=fallback_html, status_code=200)
 
 @app.get("/api/health")
 async def health_check():
