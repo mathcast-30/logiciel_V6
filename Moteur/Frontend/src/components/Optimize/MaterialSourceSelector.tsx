@@ -21,12 +21,15 @@ interface MaterialSourceSelectorProps {
     materials: IdentifiedMaterial[];
     materialSources: { [materialId: number]: 'stock' | 'supplier' };
     onSourceChange: (materialId: number, source: 'stock' | 'supplier') => void;
+    /** Callback déclenché quand l'utilisateur sélectionne des planches pour un matériau */
+    onStockSelected?: (materialId: number, stockIds: number[]) => void;
 }
 
 export function MaterialSourceSelector({
     materials,
     materialSources,
     onSourceChange,
+    // onStockSelected géré par le parent via StockSelector (non consommé en interne)
 }: MaterialSourceSelectorProps) {
     const [stockAvailability, setStockAvailability] = useState<Map<number, StockAvailability>>(new Map());
     const [isLoadingStock, setIsLoadingStock] = useState(false);

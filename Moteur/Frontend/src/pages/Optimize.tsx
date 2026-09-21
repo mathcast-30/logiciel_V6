@@ -162,48 +162,162 @@ export function Optimize() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [JSON.stringify(selectedProjectIds), selectedEngine, isOptimizing]);
 
-    // Load materials when piece selection changes (NEW)
+    // Load materials when piece selection changes
     useEffect(() => {
-        if (isOptimizing) return; // Prevent overwriting results or making unnecessary calls during optimization
+        if (isOptimizing) return;
 
         if (selectedPieceIds.length === 0) {
             setIdentifiedMaterials([]);
             setMaterialSources({});
-            setSelectedStockIds({}); // Clear stock selection
+            setSelectedStockIds({});
             return;
         }
 
         const timer = setTimeout(async () => {
             setIsLoadingMaterials(true);
             try {
-                const response = await api.post('/materials/identify-from-pieces', {
+                // Appel vers POST /api/pieces/materials (nouveau endpoint)
+                const response = await api.post('/api/pieces/materials', {
                     piece_ids: selectedPieceIds,
                     project_ids: selectedProjectIds
                 });
 
-                setIdentifiedMaterials(response.data || []);
+                const materials: IdentifiedMaterial[] = response.data?.materials || response.data || [];
+                setIdentifiedMaterials(materials);
 
-                // Initialize material sources if not already set (using functional update to avoid dependency)
+                // Initialiser materialSources à 'stock' pour les nouveaux matériaux
                 setMaterialSources(prev => {
                     const next = { ...prev };
-                    (response.data || []).forEach((m: IdentifiedMaterial) => {
+                    materials.forEach((m: IdentifiedMaterial) => {
                         if (!next[m.id]) {
-                            next[m.id] = settings.material_source;
+                            next[m.id] = 'stock';
                         }
                     });
                     return next;
                 });
             } catch (err) {
                 console.error('Error loading materials:', err);
-                toast.error('Erreur lors de l\'identification des matériaux');
+                // Fallback vers l'ancien endpoint si le nouveau n'existe pas encore
+                try {
+                    const fallback = await api.post('/materials/identify-from-pieces', {
+                        piece_ids: selectedPieceIds,
+                        project_ids: selectedProjectIds
+                    });
+                    const materials: IdentifiedMaterial[] = fallback.data?.materials || fallback.data || [];
+                    setIdentifiedMaterials(materials);
+                    setMaterialSources(prev => {
+                        const next = { ...prev };
+                        materials.forEach((m: IdentifiedMaterial) => {
+                            if (!next[m.id]) next[m.id] = 'stock';
+                        });
+                        return next;
+                    });
+                } catch {
+                    toast.error('Erreur lors de l\'identification des matériaux');
+                }
             } finally {
                 setIsLoadingMaterials(false);
             }
-        }, 500); // 500ms debounce
+        }, 500);
 
         return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [JSON.stringify(selectedPieceIds), JSON.stringify(selectedProjectIds), settings.material_source, isOptimizing]);
+    }, [JSON.stringify(selectedPieceIds), JSON.stringify(selectedProjectIds), isOptimizing]);
+
+    /**
+     * Lance l'optimisation via le nouvel endpoint POST /api/optimize
+     * avec material_sources et stock_ids par matériau.
+     */
+    const handleOptimize = async () => {
+        // --- Validation ---
+        if (selectedPieceIds.length === 0) {
+            toast.error('Veuillez sélectionner au moins une pièce');
+            return;
+        }
+        if (Object.keys(materialSources).length === 0) {
+            toast.error('Aucun matériau identifié. Vérifiez vos pièces.');
+            return;
+        }
+        // Vérifier que tous les matériaux identifiés ont une source
+        const materialsWithoutSource = identifiedMaterials.filter(
+            mat => materialSources[mat.id] === undefined
+        );
+        if (materialsWithoutSource.length > 0) {
+            toast.error('Veuillez définir une source pour tous les matériaux');
+            return;
+        }
+        // Vérifier que les matériaux en 'stock' ont des planches sélectionnées
+        const materialsStockWithoutIds = identifiedMaterials.filter(
+            mat => materialSources[mat.id] === 'stock' &&
+                   (!selectedStockIds[mat.id] || selectedStockIds[mat.id].length === 0)
+        );
+        if (materialsStockWithoutIds.length > 0) {
+            const names = materialsStockWithoutIds.map(m => m.name).join(', ');
+            toast.error(`Sélectionnez des planches pour : ${names}`);
+            return;
+        }
+
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        setIsOptimizing(true);
+        setError(null);
+        setResult(null);
+
+        try {
+            const optimizeData = {
+                piece_ids: selectedPieceIds.map(id => parseInt(id.toString(), 10)),
+                material_sources: materialSources,
+                stock_ids: selectedStockIds,
+                kerf: settings.kerf,
+                trim_margin: settings.trim_margin,
+                safety_margin: settings.safety_margin,
+                algorithm: settings.algorithm,
+                high_precision: settings.high_precision,
+                validate_and_update_stock: settings.validate_and_update_stock,
+                engine: selectedEngine,
+                raw_wood_params: selectedEngine === 'raw_wood' ? rawWoodParams : undefined,
+            };
+
+            console.log('[Optimize] Payload handleOptimize:', optimizeData);
+            const response = await api.post('/api/optimize', optimizeData, {
+                signal: controller.signal
+            });
+            const data = response.data;
+
+            // Normaliser la réponse pour ResultVisualizer
+            if (!data.optimization_id) {
+                data.optimization_id = `opt-${Date.now()}`;
+            }
+            if (!data.panels && Array.isArray(data.results)) {
+                data.panels = data.results.flatMap((r: any) => r.results?.panels || []);
+            }
+            data.success = data.success ?? true;
+
+            // Vider l'ancien résultat, laisser React démonter les composants SVG
+            setResult(null);
+            setIsOptimizing(false);
+            await new Promise(r => setTimeout(r, 50));
+            if (controller.signal.aborted) return;
+
+            setResult(data);
+            toast.success('Optimisation terminée avec succès !');
+        } catch (err: any) {
+            if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError' || controller.signal.aborted) {
+                return;
+            }
+            const detail = err?.response?.data?.detail;
+            const msg = typeof detail === 'string' ? detail : (err as Error).message || 'Erreur inconnue';
+            setError(`Erreur: ${msg}`);
+            toast.error(msg);
+            console.error('[Optimize] handleOptimize error:', err);
+        } finally {
+            setIsOptimizing(false);
+        }
+    };
 
     const runOptimization = async (forceUpdateStock = false) => {
         if (!isReady) {
@@ -807,6 +921,9 @@ export function Optimize() {
                                     onSourceChange={(materialId, source) => {
                                         setMaterialSources(prev => ({ ...prev, [materialId]: source }));
                                     }}
+                                    onStockSelected={(materialId, stockIds) => {
+                                        setSelectedStockIds(prev => ({ ...prev, [materialId]: stockIds }));
+                                    }}
                                 />
                             </div>
                         )}
@@ -966,8 +1083,8 @@ export function Optimize() {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => runOptimization()}
-                                    disabled={!isReady || isOptimizing}
+                                    onClick={handleOptimize}
+                                    disabled={selectedPieceIds.length === 0 || isOptimizing || Object.keys(materialSources).length === 0}
                                     className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl flex items-center gap-2 disabled:opacity-50 transition-all shadow-lg shadow-blue-200/50 dark:shadow-none"
                                 >
                                     {isOptimizing ? (
