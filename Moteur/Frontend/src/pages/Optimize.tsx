@@ -176,8 +176,8 @@ export function Optimize() {
         const timer = setTimeout(async () => {
             setIsLoadingMaterials(true);
             try {
-                // Appel vers POST /api/pieces/materials (nouveau endpoint)
-                const response = await api.post('/api/pieces/materials', {
+                // Appel vers POST /api/materials/identify-from-pieces
+                const response = await api.post('/materials/identify-from-pieces', {
                     piece_ids: selectedPieceIds,
                     project_ids: selectedProjectIds
                 });
@@ -197,9 +197,9 @@ export function Optimize() {
                 });
             } catch (err) {
                 console.error('Error loading materials:', err);
-                // Fallback vers l'ancien endpoint si le nouveau n'existe pas encore
+                // Fallback si l'URL est différente
                 try {
-                    const fallback = await api.post('/materials/identify-from-pieces', {
+                    const fallback = await api.post('/api/pieces/materials', {
                         piece_ids: selectedPieceIds,
                         project_ids: selectedProjectIds
                     });
@@ -361,14 +361,13 @@ export function Optimize() {
             const finalAlgorithm = finalEngine === 'raw_wood' ? rawWoodAlgorithm : settings.algorithm;
 
             // NEW - Map material sources and select pieces for optimization
-            const allStockIds = Object.values(selectedStockIds).flat().map(id => parseInt(id.toString(), 10));
             const numericPieceIds = selectedPieceIds.map(id => parseInt(id.toString(), 10));
 
             const payload: OptimizationRequest = {
                 project_ids: selectedProjectIds,
                 engine: finalEngine || 'panel',
                 piece_ids: numericPieceIds,
-                stock_ids: allStockIds,
+                stock_ids: selectedStockIds,
                 algorithm: finalAlgorithm,
                 raw_wood_params: finalEngine === 'raw_wood' ? rawWoodParams : undefined,
                 kerf: settings.kerf,

@@ -19,7 +19,7 @@ export interface OptimizationRequest {
     project_ids?: number[];
     engine?: 'auto' | 'panel' | 'raw_wood';
     piece_ids?: number[];
-    stock_ids?: number[];
+    stock_ids?: number[] | Record<number, number[]>;
     kerf: number;
     trim_margin: number;
     safety_margin: number;
