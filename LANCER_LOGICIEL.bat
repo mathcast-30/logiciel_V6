@@ -75,10 +75,13 @@ SET "VBS_FILE=%PROJECT_DIR%run_backend_hidden.vbs"
 echo [1/2] Demarrage du serveur OptiCut Pro (arriere-plan, invisible)...
 start "" cscript //nologo "%VBS_FILE%"
 
+echo Attente de l'initialisation du serveur...
+powershell -NoProfile -Command "$i=0; while($i -lt 30){ try { $resp = Invoke-WebRequest -Uri 'http://localhost:8000/health' -UseBasicParsing -TimeoutSec 1; if($resp.StatusCode -eq 200){ exit 0 } } catch {}; Start-Sleep -Milliseconds 500; $i++ }"
+
 REM ---------------------------------------------------------------------------
 REM 3. Ouverture de la page de chargement (servie par le backend, pas en file://)
 REM ---------------------------------------------------------------------------
-echo [2/2] Ouverture de la page de chargement...
+echo [2/2] Ouverture de l'application...
 SET "CHROME_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe"
 if not exist "%CHROME_PATH%" SET "CHROME_PATH=C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
 if exist "%CHROME_PATH%" (

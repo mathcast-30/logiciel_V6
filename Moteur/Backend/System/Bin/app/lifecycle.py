@@ -17,11 +17,13 @@ import time
 from pathlib import Path
 
 # Configuration des délais (en secondes)
-HEARTBEAT_TIMEOUT: float = 10.0       # Délai sans ping entraînant l'extinction
+HEARTBEAT_TIMEOUT: float = 30.0       # Délai sans ping entraînant l'extinction (30s de marge pour démarrage/charge)
 SHUTDOWN_INTENT_TIMEOUT: float = 1.5  # Délai d'attente après pagehide pour confirmer la fermeture (vs F5)
 CHECK_INTERVAL: float = 1.0           # Intervalle de vérification de la boucle watchdog
+STARTUP_GRACE_PERIOD: float = 60.0    # Période de grâce initiale au lancement du serveur
 
 # État interne
+startup_time: float = time.time()
 last_heartbeat: float = time.time()
 shutdown_requested_at: float | None = None
 _is_shutting_down: bool = False
@@ -106,7 +108,7 @@ def trigger_server_shutdown(reason: str) -> None:
 
 def watchdog() -> None:
     """Boucle de surveillance exécutée en arrière-plan."""
-    print(f"[WATCHDOG] Surveillance active (Inactivité max : {HEARTBEAT_TIMEOUT}s, Confirmation fermeture : {SHUTDOWN_INTENT_TIMEOUT}s)")
+    print(f"[WATCHDOG] Surveillance active (Inactivité max : {HEARTBEAT_TIMEOUT}s, Grâce démarrage : {STARTUP_GRACE_PERIOD}s, Confirmation fermeture : {SHUTDOWN_INTENT_TIMEOUT}s)")
     while not _is_shutting_down:
         time.sleep(CHECK_INTERVAL)
         now = time.time()
@@ -122,16 +124,18 @@ def watchdog() -> None:
                 trigger_server_shutdown(f"fermeture de fenêtre confirmée ({elapsed_since_intent:.1f}s après pagehide)")
                 break
 
-        # Cas 2 : Inactivité prolongée sans heartbeat
-        elapsed_since_heartbeat = now - current_last_heartbeat
-        if elapsed_since_heartbeat > HEARTBEAT_TIMEOUT:
-            trigger_server_shutdown(f"inactivité prolongée ({elapsed_since_heartbeat:.1f}s sans heartbeat)")
-            break
+        # Cas 2 : Inactivité prolongée sans heartbeat (seulement après la période de grâce de démarrage)
+        elapsed_since_startup = now - startup_time
+        if elapsed_since_startup > STARTUP_GRACE_PERIOD:
+            elapsed_since_heartbeat = now - current_last_heartbeat
+            if elapsed_since_heartbeat > HEARTBEAT_TIMEOUT:
+                trigger_server_shutdown(f"inactivité prolongée ({elapsed_since_heartbeat:.1f}s sans heartbeat)")
+                break
 
 
 def start_watchdog() -> None:
     """Démarre le thread de surveillance watchdog."""
-    global _watchdog_started, last_heartbeat
+    global _watchdog_started, last_heartbeat, startup_time
     if _watchdog_started:
         return
 
@@ -139,6 +143,7 @@ def start_watchdog() -> None:
         print("[WATCHDOG] Surveillance désactivée (variable DISABLE_WATCHDOG=1).")
         return
 
+    startup_time = time.time()
     last_heartbeat = time.time()
     _watchdog_started = True
     thread = threading.Thread(target=watchdog, daemon=True, name="OptiCut-Watchdog")

@@ -156,6 +156,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.middleware("http")
 async def monitoring_middleware(request: Request, call_next):
+    # Tout échange HTTP actif signale la présence d'un client actif
+    record_heartbeat()
     start_time = time.time()
     path = request.url.path
     method = request.method
