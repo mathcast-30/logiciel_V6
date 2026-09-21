@@ -31,8 +31,14 @@ class OptimizationRequest(BaseModel):
         raw_wood_params (Optional[Dict]): Paramètres pour raw_wood_engine (défaut: None).
     """
     piece_ids: Optional[List[int]] = None
-    material_sources: Dict[int, str] = Field(default_factory=dict)
-    stock_ids: Union[Dict[int, List[int]], List[int]] = Field(default_factory=dict)
+    material_sources: Dict[int, str] = Field(
+        default_factory=dict,
+        description="Dict mapping material_id to 'stock' or 'supplier'. Ex: {1: 'stock', 2: 'supplier'}"
+    )
+    stock_ids: Dict[int, List[int]] = Field(
+        default_factory=dict,
+        description="Dict mapping material_id to list of stock IDs. Ex: {1: [10, 11], 2: [20]}"
+    )
     kerf: float = 3.0
     trim_margin: float = 2.0
     safety_margin: float = 5.0
@@ -41,6 +47,7 @@ class OptimizationRequest(BaseModel):
     validate_and_update_stock: bool = False
     engine: str = "auto"
     raw_wood_params: Optional[Union[Dict[str, Any], RawWoodParams]] = None
+    colors: Optional[Dict[str, str]] = None
 
     # Compatibilité avec l'ancien format par projet
     project_id: Optional[int] = None

@@ -14,7 +14,6 @@ import {
 } from '../components/Optimize/Icons';
 import { toast } from 'sonner';
 import api from '../services/api';
-import { useTheme } from '../context/ThemeContext';
 import { type Project, ProjectService } from '../services/projectService';
 import { type OptimizationResponse, type OptimizationRequest, OptimizeService, type RawWoodParams } from '../services/optimizeService';
 import { ExportService } from '../services/exportService';
@@ -34,7 +33,6 @@ import {
 } from '../components/Optimize';
 
 export function Optimize() {
-    const { colors } = useTheme();
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -377,8 +375,7 @@ export function Optimize() {
                 validate_and_update_stock: forceUpdateStock,
                 high_precision: settings.high_precision,
                 material_source: settings.material_source,
-                material_sources: materialSources,
-                colors
+                material_sources: materialSources
             };
 
             console.log('[Optimize.tsx] Émission du payload vers le service:', payload);
