@@ -47,7 +47,6 @@ class OptimizationRequest(BaseModel):
     validate_and_update_stock: bool = False
     engine: str = "auto"
     raw_wood_params: Optional[Union[Dict[str, Any], RawWoodParams]] = None
-    colors: Optional[Dict[str, str]] = None
 
     # Compatibilité avec l'ancien format par projet
     project_id: Optional[int] = None
