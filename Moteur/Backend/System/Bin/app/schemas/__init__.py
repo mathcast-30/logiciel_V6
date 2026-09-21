@@ -274,6 +274,9 @@ class Project(ProjectBase):
     client: Optional[Client] = None
 
 
+from .projects import ProjectStats
+
+
 # Quote Schemas
 class QuoteItemBase(BaseModel):
     description: str
@@ -320,59 +323,8 @@ class Quote(QuoteBase):
 
 
 # Optimization Schemas
-class RawWoodParams(BaseModel):
-    """Raw wood optimization specific parameters."""
-    position_resolution: float = Field(default=10.0, gt=0, description="Grid resolution in mm for placement positions")
-    min_offcut_dimension: float = Field(default=100.0, ge=0, description="Minimum dimension for reusable offcuts in mm")
-    scoring_weights: Dict[str, float] = Field(
-        default={"utilization": 0.4, "compactness": 0.3, "offcut_quality": 0.3},
-        description="Scoring weights for placement evaluation"
-    )
+from .optimize import RawWoodParams, OptimizationRequest, OptimizationResponse
 
-
-class OptimizationRequest(BaseModel):
-    # Legacy compatibility
-    project_id: Optional[int] = None  # Single project (compatibility)
-    project_ids: Optional[List[int]] = None  # Multiple projects for batching
-    
-    # Engine selection (NEW)
-    engine: str = Field(default="auto", description="Engine selection: 'auto', 'panel', or 'raw_wood'")
-    
-    # Piece and stock selection (NEW)
-    piece_ids: Optional[List[int]] = Field(None, description="Optional: specific piece IDs to optimize (if not provided, all pieces from projects)")
-    stock_ids: Optional[List[int]] = Field(None, description="Optional: specific stock IDs to use (if not provided, all available stock)")
-    
-    # Material source selection per material (NEW)
-    material_sources: Optional[Dict[int, str]] = Field(None, description="Dict mapping material_id to 'stock' or 'supplier'. Ex: {1: 'stock', 2: 'supplier'}")
-    
-    # Common parameters
-    kerf: float = Field(default=3.0, gt=0, description="Blade thickness in mm")
-    trim_margin: float = Field(default=2.0, ge=0, description="Sanding/trim margin in mm")
-    safety_margin: float = Field(default=5.0, ge=0, description="Safety margin between parts in mm")
-    
-    # Algorithm selection
-    algorithm: str = Field(default="guillotine", description="Algorithm: guillotine, rectpack, next_fit, best_fit")
-    material_source: str = Field(default="stock", description="Material source: stock (from inventory) or supplier (catalog)")
-    
-    # Raw wood specific (NEW)
-    raw_wood_params: Optional[RawWoodParams] = Field(None, description="Raw wood optimization parameters (only used if engine='raw_wood')")
-    
-    # Export and execution
-    export_formats: List[str] = Field(default=["pdf"], description="Export formats: png, pdf, dxf, svg, json")
-    validate_and_update_stock: bool = Field(default=False, description="If true, update stock and add offcuts after optimization")
-    high_precision: bool = Field(default=False, description="If true, use Genetic Algorithm for better optimization (slower)")
-
-
-from typing import Any
-
-class OptimizationResponse(BaseModel):
-    optimization_id: int
-    engine_used: str = Field(default="panel", description="Which engine was used: 'panel' or 'raw_wood'")
-    total_panels_used: int
-    waste_percentage: float
-    total_cost: float = 0.0
-    result_data: Dict[str, Any]
-    export_files: Dict[str, str]
 
 
 class GAParameters(BaseModel):
@@ -464,3 +416,16 @@ class HardwareAssembly(HardwareAssemblyBase):
     
     id: int
     created_at: Optional[datetime] = None
+
+
+from .stock import (
+    StockAvailabilityRequest,
+    StockItemAvailability,
+    StockAvailabilityResponse,
+)
+from .materials import (
+    MaterialsRequest,
+    IdentifiedMaterial,
+    MaterialsResponse,
+)
+

@@ -4,7 +4,10 @@ chcp 65001 >nul
 title Mise à jour OptiCut Pro V4
 
 SET PROJECT_DIR=%~dp0
-SET DB_PATH=%PROJECT_DIR%Moteur\UserData\BaseDeDonnees\opticut.db
+SET "DB_PATH=%APPDATA%\OptiCutPro\BaseDeDonnees\opticut.db"
+IF NOT EXIST "%DB_PATH%" (
+    SET "DB_PATH=%PROJECT_DIR%Moteur\UserData\BaseDeDonnees\opticut.db"
+)
 SET BACKUP_DIR=%PROJECT_DIR%sauvegardes_avant_maj
 SET BACKEND_DIR=%PROJECT_DIR%Moteur\Backend\System\Bin
 SET FRONTEND_DIR=%PROJECT_DIR%Moteur\Frontend

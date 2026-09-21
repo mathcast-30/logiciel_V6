@@ -10,5 +10,6 @@
         "*.css": "tailwindcss"
     },
     "claudeCodeChat.permissions.yoloMode": false,
-    "python.languageServer": "None"
+    "python.languageServer": "None",
+    "codeQL.githubDatabase.update": "never"
 }

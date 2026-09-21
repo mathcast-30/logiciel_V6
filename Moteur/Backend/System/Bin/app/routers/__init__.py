@@ -7,6 +7,7 @@ from . import hardware
 from . import materials
 from . import optimize
 from . import orders
+from . import pieces
 from . import projects
 from . import qr
 from . import quotes

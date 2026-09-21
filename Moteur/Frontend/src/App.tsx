@@ -31,6 +31,24 @@ import { apiClient } from './services/apiClient';
 function AppContent() {
   const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
 
+  // ── Heartbeat & Watchdog (maintien du serveur en vie tant que la fenêtre est ouverte) ──
+  useEffect(() => {
+    const heartbeatUrl = window.location.port === '5173'
+      ? 'http://localhost:8000/api/heartbeat'
+      : '/api/heartbeat';
+
+    const sendHeartbeat = () => {
+      fetch(heartbeatUrl, { method: 'POST' }).catch(() => {});
+    };
+
+    // Ping immédiat au montage (annule instantanément tout shutdown-intent après un rechargement F5)
+    sendHeartbeat();
+
+    // Ping périodique toutes les 4 secondes
+    const interval = setInterval(sendHeartbeat, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     apiClient('/auth/setup-required')
       .then(res => res.json())

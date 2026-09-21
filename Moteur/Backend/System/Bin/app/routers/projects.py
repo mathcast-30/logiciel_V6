@@ -5,7 +5,8 @@ from typing import List, Optional, Union
 from pydantic import BaseModel
 from app.db.database import get_db
 from app.models import Project as ProjectModel, Part as PartModel
-from app.schemas import Project, ProjectCreate, Part, PartCreate
+from app.schemas import Project, ProjectCreate, Part, PartCreate, ProjectStats
+from app import schemas
 import logging
 import os
 from pathlib import Path
@@ -48,6 +49,92 @@ def get_projects(db: Session = Depends(get_db)):
         )
 
 
+# NOTE: Cette route DOIT être enregistrée AVANT GET /{project_id}
+# pour éviter que FastAPI interprète "stats" comme un project_id entier.
+@router.get("/{project_id}/stats", response_model=schemas.ProjectStats)
+def get_project_stats(
+    project_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Retourne les statistiques d'un projet :
+    - Nombre de pièces
+    - Nombre de matériaux uniques
+    - Surface totale estimée (en m²)
+    - Quantité totale de pièces
+    - Date de dernière mise à jour
+
+    **Utilisation** :
+    - Appelé par `EnhancedProjectSelector.tsx` pour afficher les stats en temps réel.
+    - Doit retourner 404 si le projet n'existe pas.
+
+    **Exemple de réponse** :
+    ```json
+    {
+      "project_id": 1,
+      "piece_count": 12,
+      "material_count": 3,
+      "estimated_area": 4.2512,
+      "total_quantity": 24,
+      "last_updated": "2026-02-01T10:30:45.123456"
+    }
+    ```
+    """
+    # --- ÉTAPE 1 : Vérifier que le projet existe ---
+    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    if project is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Project with id={project_id} not found"
+        )
+
+    # --- ÉTAPE 2 : Récupérer TOUTES les pièces du projet ---
+    # Note: On inclut les pièces sans material_id (pour piece_count et total_quantity)
+    pieces = db.query(PartModel).filter(PartModel.project_id == project_id).all()
+
+    # --- ÉTAPE 3 : Cas particulier - Projet vide ---
+    if not pieces:
+        return schemas.ProjectStats(
+            project_id=project_id,
+            piece_count=0,
+            material_count=0,
+            estimated_area=0.0,
+            total_quantity=0,
+            last_updated=project.updated_at.isoformat() if project.updated_at else None
+        )
+
+    # --- ÉTAPE 4 : Calculer les statistiques ---
+    # 4.1. Nombre total de pièces
+    piece_count = len(pieces)
+
+    # 4.2. Nombre de matériaux UNIQUES (exclure les null)
+    # Utiliser un set pour éviter les doublons
+    material_ids = {p.material_id for p in pieces if p.material_id is not None}
+    material_count = len(material_ids)
+
+    # 4.3. Surface totale estimée (en m²)
+    # Formule: (width * height * quantity) / 1_000_000 (car mm² → m²)
+    # Filtrer les pièces avec width/height non null
+    estimated_area = sum(
+        (p.width * p.height * p.quantity) / 1_000_000
+        for p in pieces
+        if p.width is not None and p.height is not None
+    )
+
+    # 4.4. Quantité totale de pièces
+    total_quantity = sum(p.quantity for p in pieces)
+
+    # --- ÉTAPE 5 : Retourner les stats ---
+    return schemas.ProjectStats(
+        project_id=project_id,
+        piece_count=piece_count,
+        material_count=material_count,
+        estimated_area=round(estimated_area, 4),  # Arrondir à 4 décimales
+        total_quantity=total_quantity,
+        last_updated=project.updated_at.isoformat() if project.updated_at else None
+    )
+
+
 @router.get("/{project_id}", response_model=Project)
 def get_project(project_id: int, db: Session = Depends(get_db)):
     """Get a specific project with all its parts."""
@@ -55,46 +142,6 @@ def get_project(project_id: int, db: Session = Depends(get_db)):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return project
-
-
-@router.get("/{project_id}/stats")
-def get_project_stats(project_id: int, db: Session = Depends(get_db)):
-    """
-    Get project statistics for frontend EnhancedProjectSelector.
-    
-    Returns:
-    {
-        "piece_count": number of parts in project,
-        "material_count": number of unique materials,
-        "estimated_area": total area of all parts in mm²
-    }
-    """
-    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    
-    # Count parts
-    parts = db.query(PartModel).filter(PartModel.project_id == project_id).all()
-    piece_count = len(parts)
-    
-    # Count unique materials
-    unique_materials = set()
-    total_area = 0.0
-    
-    for part in parts:
-        if part.material_id:
-            unique_materials.add(part.material_id)
-        # Calculate area per piece (width × height × quantity)
-        area_per_piece = part.width * part.height
-        total_area += area_per_piece * part.quantity
-    
-    material_count = len(unique_materials)
-    
-    return {
-        "piece_count": piece_count,
-        "material_count": material_count,
-        "estimated_area": total_area
-    }
 
 
 @router.post("/", response_model=Project)

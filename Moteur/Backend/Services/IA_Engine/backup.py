@@ -23,26 +23,52 @@ class BackupManager:
     backup_dir: Path
     temp_dir: Path
 
-    def __init__(self) -> None:
-        # Configuration des chemins robustes
-        if getattr(sys, 'frozen', False):
-            # Exécutable PyInstaller : données persistantes dans %APPDATA%
-            appdata = Path(os.environ.get('APPDATA', str(Path.home() / 'AppData' / 'Roaming')))
-            base_engine_dir = appdata / 'OptiCutPro'
+    def __init__(self, data_dir: Path | None = None) -> None:
+        # Configuration des chemins robustes centralisés
+        if data_dir is not None:
+            base_engine_dir = Path(data_dir).resolve()
         else:
-            # Développement : trouver le dossier Moteur par traversal
-            current_path = Path(__file__).resolve()
+            # 1. Utiliser get_data_dir() de app.core.config si disponible
             try:
-                moteur_index = current_path.parts.index('Moteur')
-                base_engine_dir = Path(*current_path.parts[:moteur_index + 1])
-            except ValueError:
-                base_engine_dir = current_path.parent.parent.parent.parent.parent
-
-            # En dév, les données sont dans Moteur/UserData
-            base_engine_dir = base_engine_dir / 'UserData'
+                from app.core.config import get_data_dir
+                base_engine_dir = get_data_dir()
+            except ImportError:
+                # 2. Résolution native OS identique à app.core.config
+                custom_path = os.getenv("OPTICUT_DATA_DIR")
+                if custom_path:
+                    base_engine_dir = Path(custom_path).resolve()
+                elif sys.platform == "win32":
+                    appdata = Path(os.environ.get('APPDATA', str(Path.home() / 'AppData' / 'Roaming')))
+                    base_engine_dir = appdata / 'OptiCutPro'
+                elif sys.platform == "darwin":
+                    base_engine_dir = Path.home() / 'Library' / 'Application Support' / 'OptiCutPro'
+                else:
+                    base_engine_dir = Path.home() / '.config' / 'OptiCutPro'
 
         self.base_dir = base_engine_dir
-        self.db_path = self.base_dir / 'BaseDeDonnees' / 'opticut.db'
+
+        # Résolution de la base de données (priorité DB_PATH env, puis AppData, puis repli UserData)
+        db_env = os.getenv('DB_PATH')
+        if db_env and Path(db_env).exists():
+            self.db_path = Path(db_env).resolve()
+        else:
+            primary_db = self.base_dir / 'BaseDeDonnees' / 'opticut.db'
+            if primary_db.exists():
+                self.db_path = primary_db
+            else:
+                # Repli de sécurité pour environnement de développement local historique
+                current_path = Path(__file__).resolve()
+                try:
+                    moteur_index = current_path.parts.index('Moteur')
+                    dev_moteur = Path(*current_path.parts[:moteur_index + 1])
+                    dev_db = dev_moteur / 'UserData' / 'BaseDeDonnees' / 'opticut.db'
+                    if dev_db.exists():
+                        self.db_path = dev_db
+                    else:
+                        self.db_path = primary_db
+                except ValueError:
+                    self.db_path = primary_db
+
         self.documents_path = self.base_dir / 'Documents'
         self.backup_dir = self.base_dir / 'Sauvegardes' / 'Backups'
         self.temp_dir = self.backup_dir / '.temp'

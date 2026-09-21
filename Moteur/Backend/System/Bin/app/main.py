@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request, Depends, BackgroundTasks
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 import uvicorn
@@ -30,11 +30,15 @@ from .dependencies import get_current_user
 from .routers import (
     projects, materials, optimize, stock, clients, 
     suppliers, hardware, ai, step_import, stats,
-    exports, backups, qr, quotes, scraping, orders, templates, files, management, auth, users, settings
+    exports, backups, qr, quotes, scraping, orders, templates, files, management, auth, users, settings,
+    pieces
 )
 
 # Import professional monitoring system
 from .monitoring_client import log_info, log_error
+
+# Import lifecycle management (heartbeat, shutdown-intent, watchdog)
+from .lifecycle import record_heartbeat, record_shutdown_intent, start_watchdog, is_backup_done
 
 
 def _ensure_part_geometry_columns():
@@ -181,9 +185,29 @@ async def monitoring_middleware(request: Request, call_next):
 from .db.database import OPTIMIZATIONS_DIR
 app.mount("/api/files", StaticFiles(directory=str(OPTIMIZATIONS_DIR)), name="exports")
 
+@app.get("/loading.html", include_in_schema=False)
+async def loading_page():
+    """Serve loading.html via HTTP so fetch() has the correct origin (not file://)."""
+    loading_path = Path(__file__).resolve().parents[4] / "UserData" / "loading.html"
+    return FileResponse(str(loading_path), media_type="text/html")
+
 @app.get("/api/health")
 async def health_check():
     return {"status": "ok"}
+
+@app.get("/health")
+async def health_check_root():
+    return {"status": "ok"}
+
+@app.post("/api/heartbeat", tags=["system"])
+async def heartbeat_ping():
+    """Ping périodique du frontend pour maintenir le serveur actif."""
+    return record_heartbeat()
+
+@app.post("/api/shutdown-intent", tags=["system"])
+async def shutdown_intent_notification():
+    """Notification de fermeture d'onglet/fenêtre (pagehide sendBeacon)."""
+    return record_shutdown_intent()
 
 
 # 1. Public Routers
@@ -211,6 +235,7 @@ app.include_router(files.router, prefix="/api/file-explorer", tags=["Explorateur
 app.include_router(management.router, prefix="/api/management", tags=["management"], dependencies=[Depends(get_current_user)])
 app.include_router(settings.router, prefix="/api/settings", tags=["Paramètres"], dependencies=[Depends(get_current_user)])
 app.include_router(users.router, prefix="/api", tags=["users"], dependencies=[Depends(get_current_user)])
+app.include_router(pieces.router, prefix="/api/pieces", tags=["Pièces"], dependencies=[Depends(get_current_user)])
 
 
 @app.on_event("startup")
@@ -230,6 +255,9 @@ async def startup_event():
 
     # 2. Run Alembic migrations (tables & structures)
     run_db_migrations()
+
+    # 3. Démarrage du thread watchdog d'inactivité
+    start_watchdog()
 
     log_info("System", "Main", "🚀 OptiCut Pro Backend (V4.2) est opérationnel.")
     log_info("System", "Database", f"SQLite Engine initialisé. Fichier utilisé : {db_path}")
@@ -253,6 +281,9 @@ async def startup_event():
 @app.on_event("shutdown")
 def shutdown_event():
     """Sauvegarde automatique à la fermeture propre du serveur."""
+    if is_backup_done():
+        print("[BACKUP] Sauvegarde déjà effectuée lors de la séquence d'arrêt.")
+        return
     try:
         from IA_Engine.backup import get_backup_manager
         manager = get_backup_manager()

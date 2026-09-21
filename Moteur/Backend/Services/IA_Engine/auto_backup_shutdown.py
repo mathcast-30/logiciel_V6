@@ -10,15 +10,15 @@ if TYPE_CHECKING:
 
 # Tentative d'import robuste pour éviter les erreurs de linter et d'exécution
 try:
-    # Essai d'import absolu (cas standard depuis la racine)
-    from Moteur.Backend.Services.IA_Engine.backup import get_backup_manager # type: ignore
+    from IA_Engine.backup import get_backup_manager  # type: ignore
 except ImportError:
     try:
-        # Essai d'import relatif (cas module)
-        from .backup import get_backup_manager # type: ignore
+        from .backup import get_backup_manager  # type: ignore
     except ImportError:
-        # Fallback pour éviter le crash à l'import (sera géré au runtime)
-        get_backup_manager = None # type: ignore
+        try:
+            from Moteur.Backend.Services.IA_Engine.backup import get_backup_manager  # type: ignore
+        except ImportError:
+            get_backup_manager = None  # type: ignore
 
 # Initialisation par défaut
 is_backup_available = True

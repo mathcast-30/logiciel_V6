@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, BackgroundTasks
 import pydantic
 import logging
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Dict, Any, Optional
+from datetime import datetime
 import json
 import os
 from app.db.database import get_db, OPTIMIZATIONS_DIR
+from app import schemas
 from app.schemas import OptimizationRequest, OptimizationResponse
+from app.dependencies import get_current_user
 from app.models import Project, Part, Stock, Material, OptimizationResult, EdgeBand, SupplierMaterial, Supplier
 from IA_Engine.optimizer import GuillotineOptimizer, Piece
 from IA_Engine.genetic_optimizer import GeneticOptimizer
@@ -22,6 +25,264 @@ export_generator = ExportGenerator(output_dir=str(OPTIMIZATIONS_DIR))
 
 
 logger = logging.getLogger(__name__)
+
+
+@router.post("", response_model=schemas.OptimizationResponse)
+@router.post("/", response_model=schemas.OptimizationResponse)
+@router.post("/optimize", response_model=schemas.OptimizationResponse)
+async def optimize(
+    request: schemas.OptimizationRequest,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user),
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    """
+    Lance une optimisation avec :
+    - Séparation par matériau
+    - Gestion des sources (stock/fournisseur)
+    - Optimisation séparée pour chaque matériau
+
+    **Nouveautés** :
+    - `material_sources`: Source par matériau ('stock' ou 'supplier').
+    - `stock_ids`: Planches sélectionnées par matériau.
+    """
+    # --- ÉTAPE 1 : Validation de la requête ---
+    if not request.piece_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="piece_ids cannot be empty"
+        )
+
+    if not request.material_sources:
+        raise HTTPException(
+            status_code=400,
+            detail="material_sources cannot be empty"
+        )
+
+    # --- ÉTAPE 2 : Récupérer les pièces depuis la base ---
+    pieces = db.query(Part).filter(Part.id.in_(request.piece_ids)).all()
+    if not pieces:
+        raise HTTPException(
+            status_code=404,
+            detail="No pieces found for given IDs"
+        )
+
+    # --- ÉTAPE 3 : Grouper les pièces par material_id ---
+    pieces_by_material: Dict[int, List[Part]] = {}
+    for piece in pieces:
+        mat_id = piece.material_id or 0
+        if mat_id not in pieces_by_material:
+            pieces_by_material[mat_id] = []
+        pieces_by_material[mat_id].append(piece)
+
+    # --- ÉTAPE 4 : Initialiser les résultats ---
+    all_results: List[Dict[str, Any]] = []
+    all_panels: List[Dict[str, Any]] = []
+    total_waste: float = 0.0
+    total_used_area: float = 0.0
+
+    # --- ÉTAPE 5 : Traiter chaque matériau séparément ---
+    for material_id, material_pieces in pieces_by_material.items():
+        # 5.1. Vérifier que la source est définie pour ce matériau
+        source = request.material_sources.get(material_id) or request.material_sources.get(str(material_id))  # type: ignore[arg-type]
+        if source is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"No source specified for material_id={material_id}"
+            )
+
+        # 5.2. Vérifier que le matériau existe
+        material = db.query(Material).filter(Material.id == material_id).first()
+        if material is None:
+            continue  # Ignorer les matériaux introuvables
+
+        # 5.3. Si source = 'stock', vérifier que des stock_ids sont fournis
+        selected_stock_ids: List[int] = []
+        if isinstance(request.stock_ids, dict):
+            selected_stock_ids = request.stock_ids.get(material_id) or request.stock_ids.get(str(material_id), [])  # type: ignore[assignment,arg-type]
+        elif isinstance(request.stock_ids, list):
+            selected_stock_ids = request.stock_ids
+
+        if source == 'stock' and not selected_stock_ids:
+            raise HTTPException(
+                status_code=400,
+                detail=f"No stock_ids provided for material_id={material_id} (source=stock)"
+            )
+
+        # 5.4. Récupérer les planches sélectionnées (si stock)
+        stock_items: List[Stock] = []
+        if source == 'stock' and selected_stock_ids:
+            stock_items = db.query(Stock).filter(
+                Stock.id.in_(selected_stock_ids),
+                Stock.material_id == material_id
+            ).all()
+
+        # 5.5. Préparer les données pour l'optimisation
+        # 5.5.1. Convertir les pièces en format attendu par l'optimiseur
+        parts_data: List[Dict[str, Any]] = []
+        for piece in material_pieces:
+            piece_thickness = getattr(piece, "thickness", None)
+            if piece_thickness is None:
+                piece_thickness = material.thickness if material else 18.0
+
+            parts_data.append({
+                "id": piece.id,
+                "width": piece.width,
+                "height": piece.height,
+                "quantity": piece.quantity,
+                "material_id": piece.material_id,
+                "component_name": getattr(piece, "component_name", None),
+                "names_source": getattr(piece, "names_source", None),
+                "thickness": float(piece_thickness),
+            })
+
+        # 5.5.2. Préparer les panneaux (stock ou fournisseur)
+        panels_data: List[Dict[str, Any]] = []
+
+        if source == 'stock':
+            # Utiliser les planches sélectionnées
+            for stock in stock_items:
+                stock_thickness = getattr(stock, "thickness", None)
+                if stock_thickness is None:
+                    stock_thickness = material.thickness if material else 18.0
+
+                unit_cost = getattr(stock, "unit_cost", None) or getattr(stock, "prix_unitaire", 0.0) or 0.0
+                ref = getattr(stock, "reference", None) or getattr(stock, "label", None) or f"Stock {stock.id}"
+
+                panels_data.append({
+                    "id": stock.id,
+                    "width": stock.width,
+                    "height": stock.height,
+                    "thickness": float(stock_thickness),
+                    "material_id": stock.material_id,
+                    "cost": float(unit_cost),
+                    "quantity": stock.quantity,
+                    "reference": str(ref),
+                })
+        else:
+            # Source = 'supplier' : utiliser le catalogue du fournisseur
+            panels_data.append({
+                "id": -1,  # ID temporaire (négatif pour indiquer "fournisseur")
+                "width": 2500.0,  # Largeur par défaut
+                "height": 1200.0,  # Hauteur par défaut
+                "thickness": float(material.thickness if material.thickness else 18.0),  # Épaisseur du matériau
+                "material_id": material_id,
+                "cost": float(material.cost_per_sqm if material.cost_per_sqm else 30.0),  # Coût par m²
+                "quantity": 100,  # Quantité illimitée pour le fournisseur
+                "reference": f"SUPPLIER-{material.name}-DEFAULT",
+            })
+
+        # 5.6. Appeler l'optimiseur approprié
+        result = None
+        if material.is_panel:
+            # Optimisation pour panneaux (rectpack ou guillotine)
+            try:
+                from ..services.panel_optimizer import optimize_panel
+                result = optimize_panel(
+                    parts=parts_data,
+                    panels=panels_data,
+                    kerf=request.kerf,
+                    algorithm=request.algorithm,
+                    trim_margin=request.trim_margin,
+                    safety_margin=request.safety_margin,
+                    high_precision=request.high_precision,
+                )
+            except ImportError:
+                raise HTTPException(
+                    status_code=500,
+                    detail="panel_optimizer module not found"
+                )
+        else:
+            # Optimisation pour bois massif
+            if request.engine == 'raw_wood' or (request.engine == 'auto' and not material.is_panel):
+                try:
+                    from ..services.raw_wood_optimizer import optimize_raw_wood
+                    raw_wood_params = request.raw_wood_params
+                    if hasattr(raw_wood_params, "model_dump"):
+                        raw_wood_params = raw_wood_params.model_dump()
+                    elif hasattr(raw_wood_params, "dict"):
+                        raw_wood_params = raw_wood_params.dict()
+                    elif not isinstance(raw_wood_params, dict):
+                        raw_wood_params = {}
+
+                    result = optimize_raw_wood(
+                        parts=parts_data,
+                        panels=panels_data,
+                        kerf=request.kerf,
+                        params=raw_wood_params or {},
+                    )
+                except ImportError:
+                    # Fallback: utiliser l'optimiseur de panneaux
+                    try:
+                        from ..services.panel_optimizer import optimize_panel
+                        result = optimize_panel(
+                            parts=parts_data,
+                            panels=panels_data,
+                            kerf=request.kerf,
+                            algorithm=request.algorithm,
+                        )
+                    except ImportError:
+                        raise HTTPException(
+                            status_code=500,
+                            detail="No optimizer available for raw wood"
+                        )
+            else:
+                # Utiliser l'optimiseur de panneaux
+                try:
+                    from ..services.panel_optimizer import optimize_panel
+                    result = optimize_panel(
+                        parts=parts_data,
+                        panels=panels_data,
+                        kerf=request.kerf,
+                        algorithm=request.algorithm,
+                    )
+                except ImportError:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="panel_optimizer module not found"
+                    )
+
+        # 5.7. Ajouter les résultats au global
+        if result:
+            all_results.append({
+                "material_id": material_id,
+                "material_name": material.name,
+                "source": source,
+                "results": result,
+            })
+            all_panels.extend(result.get("panels", []))
+            total_waste += result.get("total_waste", 0.0)
+            total_used_area += result.get("total_used_area", 0.0)
+
+    # --- ÉTAPE 6 : Calculer les métriques globales ---
+    total_panels_used = len(all_panels)
+    waste_percentage = (
+        (total_waste / (total_used_area + total_waste) * 100)
+        if (total_used_area + total_waste) > 0
+        else 0.0
+    )
+
+    # --- ÉTAPE 7 : Sauvegarder le résultat en base (optionnel) ---
+    if request.validate_and_update_stock:
+        # TODO: Implémenter la sauvegarde du résultat
+        pass
+
+    # --- ÉTAPE 8 : Retourner la réponse ---
+    return schemas.OptimizationResponse(
+        success=True,
+        message="Optimisation terminée",
+        results=all_results,
+        panels=all_panels,
+        total_panels_used=total_panels_used,
+        total_waste=round(total_waste, 4),
+        waste_percentage=round(waste_percentage, 2),
+        total_used_area=round(total_used_area, 4),
+        algorithm=request.algorithm,
+        engine=request.engine,
+        material_sources=request.material_sources,
+        created_at=datetime.utcnow().isoformat(),
+    )
+
 
 
 @router.post("/run", response_model=OptimizationResponse)

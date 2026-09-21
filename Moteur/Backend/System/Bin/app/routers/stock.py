@@ -9,13 +9,18 @@ from __future__ import annotations
 import json
 from typing import Any, cast
 
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from pydantic import BaseModel, ConfigDict
 
 from app.db.database import get_db
 from app.models import Stock, Material
+from app.schemas.stock import (
+    StockAvailabilityRequest,
+    StockItemAvailability,
+    StockAvailabilityResponse,
+)
 
 
 router = APIRouter(tags=["stock"])
@@ -240,78 +245,126 @@ def update_stock_defects(
     return {"success": True, "defect_count": len(defects)}
 
 
-@router.post("/availability")
+@router.post("/availability", response_model=StockAvailabilityResponse)
 def check_stock_availability(
-    material_ids: list[int] = Body(..., embed=True),
+    request: StockAvailabilityRequest,
     db: Session = Depends(get_db)
-) -> dict[str, list[dict[str, Any]]]:
+) -> StockAvailabilityResponse:
     """
-    Check stock availability for materials.
-    
-    Used by MaterialSourceSelector to show stock information when "Stock" source is selected.
+    Vérifie la disponibilité du stock pour une liste de matériaux.
+
+    **Utilisation** :
+    - Appelé par `MaterialSourceSelector.tsx` pour afficher les options de stock.
+
+    **Exemple de requête** :
+    ```json
+    {
+      "material_ids": [1, 2]
+    }
+    ```
+
+    **Exemple de réponse** :
+    ```json
+    {
+      "availabilities": [
+        {
+          "material_id": 1,
+          "available_quantity": 15,
+          "available_area": 6.7500,
+          "sufficient": false,
+          "shortfall": null,
+          "stock_items": [
+            {
+              "id": 10,
+              "reference": "CHENE-001",
+              "width": 2500,
+              "height": 1200,
+              "thickness": 20,
+              "quantity": 5,
+              "unit_cost": 45.50,
+              "area": 3.0000,
+              "total_area": 15.0000
+            }
+          ]
+        }
+      ]
+    }
+    ```
     """
-    result = []
-    
-    for mat_id in material_ids:
-        # Get material info
-        material = db.query(Material).filter(Material.id == mat_id).first()
-        if not material:
-            continue
-        
-        # Get all stock for this material
-        stock_items = db.query(Stock).filter(Stock.material_id == mat_id).all()
-        
-        # Calculate availability
-        total_available_area = 0.0
-        total_cost = 0.0
-        available_panels = []
-        
-        for stock_item in stock_items:
-            qty = int(cast(Any, stock_item.quantity))
-            if qty > 0:
-                width = float(cast(Any, stock_item.width))
-                height = float(cast(Any, stock_item.height))
-                area_mm2 = width * height * qty
-                total_available_area += area_mm2
-                
-                # Calculate cost for this stock item
-                area_m2 = area_mm2 / 1_000_000
-                if material.price_type == "m2":
-                    item_cost = area_m2 * float(cast(Any, material.cost_per_sqm))
-                elif material.price_type == "m3":
-                    thickness_m = float(cast(Any, material.thickness)) / 1000
-                    volume_m3 = area_m2 * thickness_m
-                    item_cost = volume_m3 * float(cast(Any, material.cost_per_sqm))
-                else:  # unit
-                    item_cost = qty * float(cast(Any, material.cost_per_sqm))
-                
-                total_cost += item_cost
-                
-                available_panels.append({
-                    "id": int(cast(Any, stock_item.id)),
-                    "width": width,
-                    "height": height,
-                    "quantity": qty,
-                    "area": area_mm2,
-                    "is_offcut": bool(cast(Any, stock_item.is_offcut)),
-                    "grain_direction": int(cast(Any, stock_item.grain_direction)),
-                    "quality_score": float(cast(Any, stock_item.quality_score)),
-                    "label": cast("str | None", stock_item.label)
-                })
-        
-        result.append({
-            "material_id": int(cast(Any, material.id)),
-            "material_name": str(cast(Any, material.name)),
-            "material_species": cast("str | None", material.species) or "Inconnu",
-            "is_panel": bool(cast(Any, material.is_panel)),
-            "thickness": float(cast(Any, material.thickness)),
-            "stock_count": len([s for s in stock_items if int(cast(Any, s.quantity)) > 0]),
-            "available_area": total_available_area,
-            "available_panels": available_panels,
-            "estimated_cost": round(total_cost, 2)
-        })
-    
-    return {"availability": result}
+    # --- ÉTAPE 1 : Validation de la requête ---
+    if not request.material_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="material_ids cannot be empty"
+        )
+
+    availabilities: list[StockItemAvailability] = []
+
+    # --- ÉTAPE 2 : Traiter chaque material_id ---
+    for material_id in request.material_ids:
+        # 2.1. Vérifier que le matériau existe
+        material = db.query(Material).filter(Material.id == material_id).first()
+        if material is None:
+            continue  # Ignorer les matériaux introuvables
+
+        # 2.2. Récupérer TOUS les stocks pour ce matériau (quantity > 0)
+        stock_items = db.query(Stock).filter(
+            Stock.material_id == material_id,
+            Stock.quantity > 0
+        ).all()
+
+        # 2.3. Calculer la quantité et surface totale disponible
+        available_quantity = sum(int(cast(Any, item.quantity)) for item in stock_items)
+        available_area = sum(
+            (float(cast(Any, item.width)) * float(cast(Any, item.height)) * int(cast(Any, item.quantity))) / 1_000_000
+            for item in stock_items
+        )
+
+        # 2.4. Construire la liste des planches (pour affichage détaillé)
+        stock_items_list: list[dict[str, Any]] = []
+        for item in stock_items:
+            item_width = float(cast(Any, item.width))
+            item_height = float(cast(Any, item.height))
+            item_qty = int(cast(Any, item.quantity))
+            item_area = (item_width * item_height) / 1_000_000  # m²
+            item_total_area = (item_width * item_height * item_qty) / 1_000_000  # m²
+
+            thickness = getattr(item, "thickness", None)
+            if thickness is None and getattr(item, "material", None):
+                thickness = item.material.thickness
+            elif thickness is None:
+                thickness = material.thickness if material else 0.0
+
+            ref = getattr(item, "reference", None) or getattr(item, "label", None) or ""
+            unit_cost = getattr(item, "unit_cost", None) or getattr(item, "prix_unitaire", None) or 0.0
+
+            stock_items_list.append({
+                "id": int(cast(Any, item.id)),
+                "reference": str(ref),
+                "width": item_width,
+                "height": item_height,
+                "thickness": float(thickness),
+                "quantity": item_qty,
+                "unit_cost": float(unit_cost),
+                "area": round(item_area, 4),
+                "total_area": round(item_total_area, 4),
+            })
+
+        # 2.5. Créer l'objet de disponibilité
+        # Note: 'sufficient' est False par défaut car on ne connaît pas la demande.
+        # Le frontend devra comparer avec la quantité nécessaire.
+        availabilities.append(
+            StockItemAvailability(
+                material_id=material_id,
+                available_quantity=available_quantity,
+                available_area=round(available_area, 4),
+                stock_items=stock_items_list,
+                sufficient=False,  # À recalculer côté frontend
+                shortfall=None
+            )
+        )
+
+    return StockAvailabilityResponse(availabilities=availabilities)
 
 
 class StockUpdate(BaseModel):

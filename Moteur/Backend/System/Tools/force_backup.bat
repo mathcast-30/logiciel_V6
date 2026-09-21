@@ -4,9 +4,10 @@ setlocal
 cd /d "%~dp0"
 :: On remonte de System/Tools vers Moteur/Backend
 cd ..\..
-:: On remonte vers Moteur/ pour atteindre UserData/
-set "DB_FILE=..\UserData\BaseDeDonnees\opticut.db"
-set "BACKUP_DIR=..\UserData\Sauvegardes\Safe_Archives"
+:: Base de données réelle dans AppData, repli UserData
+set "DB_FILE=%APPDATA%\OptiCutPro\BaseDeDonnees\opticut.db"
+if not exist "%DB_FILE%" set "DB_FILE=..\UserData\BaseDeDonnees\opticut.db"
+set "BACKUP_DIR=%APPDATA%\OptiCutPro\Sauvegardes\Safe_Archives"
 
 echo ==========================================
 echo       SAUVEGARDE DE SECURITE OPTICUT

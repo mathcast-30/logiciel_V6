@@ -49,10 +49,11 @@ export function MaterialSourceSelector({
                 });
 
                 const availabilityMap = new Map<number, StockAvailability>();
-                for (const item of response.data.availability || []) {
+                const items = response.data.availabilities || response.data.availability || [];
+                for (const item of items) {
                     availabilityMap.set(item.material_id, {
                         materialId: item.material_id,
-                        stockCount: item.stock_count || 0,
+                        stockCount: item.available_quantity ?? item.stock_count ?? (item.stock_items ? item.stock_items.length : 0),
                         availableArea: item.available_area || 0,
                         estimatedCost: item.estimated_cost || 0,
                     });
