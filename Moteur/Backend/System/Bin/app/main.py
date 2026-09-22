@@ -112,6 +112,8 @@ if not cors_origins_env:
     allow_origins = [
         "http://localhost:8000",
         "http://127.0.0.1:8000",
+        "http://localhost:8090",
+        "http://127.0.0.1:8090",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
@@ -120,7 +122,7 @@ if not cors_origins_env:
 else:
     allow_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
 
-for required_origin in ["http://localhost:8000", "http://127.0.0.1:8000"]:
+for required_origin in ["http://localhost:8000", "http://127.0.0.1:8000", "http://localhost:8090", "http://127.0.0.1:8090"]:
     if required_origin not in allow_origins:
         allow_origins.append(required_origin)
 

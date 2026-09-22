@@ -69,8 +69,7 @@ REM ---------------------------------------------------------------------------
 SET "VBS_BACKEND=%PROJECT_DIR%run_backend_hidden.vbs"
 
 > "%VBS_BACKEND%" echo Set sh = CreateObject("WScript.Shell")
->>"%VBS_BACKEND%" echo sh.CurrentDirectory = "%BACKEND_DIR%"
->>"%VBS_BACKEND%" echo sh.Run """%PYTHON_EXE%"" -m uvicorn app.main:app --host 0.0.0.0 --port 8000", 0, False
+>>"%VBS_BACKEND%" echo sh.Run "cmd /c cd /d ""%BACKEND_DIR%"" && ""%PYTHON_EXE%"" -m uvicorn app.main:app --host 0.0.0.0 --port 8000", 0, False
 
 echo [1/3] Demarrage du backend OptiCut Pro (arriere-plan, invisible)...
 start "" cscript //nologo "%VBS_BACKEND%"
