@@ -64,30 +64,44 @@ echo [OK] Environnement Python detecte : %PYTHON_EXE%
 echo [INFO] Python : %PYTHON_EXE% >> "%LOG_FILE%"
 
 REM ---------------------------------------------------------------------------
-REM 2. Generation du wrapper VBS (lance le backend sans aucune fenetre visible)
+REM 2a. Generation du wrapper VBS pour le backend principal (port 8000)
 REM ---------------------------------------------------------------------------
-SET "VBS_FILE=%PROJECT_DIR%run_backend_hidden.vbs"
+SET "VBS_BACKEND=%PROJECT_DIR%run_backend_hidden.vbs"
 
-> "%VBS_FILE%" echo Set sh = CreateObject("WScript.Shell")
->>"%VBS_FILE%" echo sh.CurrentDirectory = "%BACKEND_DIR%"
->>"%VBS_FILE%" echo sh.Run """%PYTHON_EXE%"" -m uvicorn app.main:app --host 0.0.0.0 --port 8000", 0, False
+> "%VBS_BACKEND%" echo Set sh = CreateObject("WScript.Shell")
+>>"%VBS_BACKEND%" echo sh.CurrentDirectory = "%BACKEND_DIR%"
+>>"%VBS_BACKEND%" echo sh.Run """%PYTHON_EXE%"" -m uvicorn app.main:app --host 0.0.0.0 --port 8000", 0, False
 
-echo [1/2] Demarrage du serveur OptiCut Pro (arriere-plan, invisible)...
-start "" cscript //nologo "%VBS_FILE%"
-
-echo Attente de l'initialisation du serveur...
-powershell -NoProfile -Command "$i=0; while($i -lt 30){ try { $resp = Invoke-WebRequest -Uri 'http://localhost:8000/health' -UseBasicParsing -TimeoutSec 1; if($resp.StatusCode -eq 200){ exit 0 } } catch {}; Start-Sleep -Milliseconds 500; $i++ }"
+echo [1/3] Demarrage du backend OptiCut Pro (arriere-plan, invisible)...
+start "" cscript //nologo "%VBS_BACKEND%"
 
 REM ---------------------------------------------------------------------------
-REM 3. Ouverture de la page de chargement (servie par le backend, pas en file://)
+REM 2b. Generation du wrapper VBS pour le micro-serveur de chargement (port 8090)
 REM ---------------------------------------------------------------------------
-echo [2/2] Ouverture de l'application...
+SET "VBS_LOADING=%PROJECT_DIR%run_loading_hidden.vbs"
+
+> "%VBS_LOADING%" echo Set sh = CreateObject("WScript.Shell")
+>>"%VBS_LOADING%" echo sh.CurrentDirectory = "%PROJECT_DIR%"
+>>"%VBS_LOADING%" echo sh.Run """%PYTHON_EXE%"" Tools\loading_server.py", 0, False
+
+echo [2/3] Demarrage du serveur de chargement (port 8090, arriere-plan)...
+start "" cscript //nologo "%VBS_LOADING%"
+
+REM Courte pause (600ms) pour que le micro-serveur 8090 ait le temps de lier le port
+REM avant que Chrome ne s'ouvre (Python stdlib demarre en <200ms)
+powershell -NoProfile -Command "Start-Sleep -Milliseconds 600"
+
+REM ---------------------------------------------------------------------------
+REM 3. Ouverture IMMEDIATE de Chrome sur la page d'attente (port 8090)
+REM    C'est le JS de la page qui poll /health du backend - pas le .bat
+REM ---------------------------------------------------------------------------
+echo [3/3] Ouverture de l'application dans Chrome...
 SET "CHROME_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe"
 if not exist "%CHROME_PATH%" SET "CHROME_PATH=C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
 if exist "%CHROME_PATH%" (
-    start "" "%CHROME_PATH%" "http://localhost:8000/loading.html"
+    start "" "%CHROME_PATH%" "http://localhost:8090/"
 ) else (
-    start "" "http://localhost:8000/loading.html"
+    start "" "http://localhost:8090/"
 )
 
 exit /b 0

@@ -29,7 +29,17 @@ IF EXIST "%USERDATA_DIR%\opticut_backend.pid" (
     del "%USERDATA_DIR%\opticut_backend.pid" >nul 2>&1
 )
 
-REM 2. Arret du Frontend via PID
+REM 2. Arret du Serveur de Chargement (port 8090) via PID
+IF EXIST "%USERDATA_DIR%\opticut_loading.pid" (
+    SET /P LOADING_PID=<"%USERDATA_DIR%\opticut_loading.pid"
+    IF DEFINED LOADING_PID (
+        echo [INFO] Arret du Serveur de Chargement (PID: %LOADING_PID%)...
+        taskkill /F /T /PID %LOADING_PID% >nul 2>&1
+    )
+    del "%USERDATA_DIR%\opticut_loading.pid" >nul 2>&1
+)
+
+REM 3. Arret du Frontend via PID
 IF EXIST "%USERDATA_DIR%\opticut_frontend.pid" (
     SET /P FRONTEND_PID=<"%USERDATA_DIR%\opticut_frontend.pid"
     IF DEFINED FRONTEND_PID (
@@ -49,8 +59,11 @@ IF EXIST "%USERDATA_DIR%\opticut_logs.pid" (
     del "%USERDATA_DIR%\opticut_logs.pid" >nul 2>&1
 )
 
-REM 4. Filet de securite : verification et fermeture des ports dedies uniquement
+REM 5. Filet de securite : verification et fermeture des ports dedies uniquement
 FOR /F "tokens=5" %%P IN ('netstat -ano ^| findstr ":8000" ^| find "LISTENING"') DO (
+    taskkill /F /PID %%P /T >nul 2>&1
+)
+FOR /F "tokens=5" %%P IN ('netstat -ano ^| findstr ":8090" ^| find "LISTENING"') DO (
     taskkill /F /PID %%P /T >nul 2>&1
 )
 FOR /F "tokens=5" %%P IN ('netstat -ano ^| findstr ":5173" ^| find "LISTENING"') DO (
