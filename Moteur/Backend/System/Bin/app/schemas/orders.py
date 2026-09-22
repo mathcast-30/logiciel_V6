@@ -22,6 +22,7 @@ class OrderItem(OrderItemBase):
 
 class OrderBase(BaseModel):
     supplier_id: int
+    quote_id: Optional[int] = None
     notes: Optional[str] = None
     expected_delivery_date: Optional[datetime] = None
 

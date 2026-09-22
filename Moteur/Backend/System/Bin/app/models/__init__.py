@@ -167,6 +167,7 @@ class Order(Base):
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     supplier_id: Mapped[int] = mapped_column(Integer, ForeignKey("suppliers.id"))
+    quote_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("quotes.id"), nullable=True)
     status: Mapped[OrderStatus] = mapped_column(Enum(OrderStatus), default=OrderStatus.DRAFT)
     total_cost: Mapped[float] = mapped_column(Float, default=0.0)
     expected_delivery_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
@@ -175,6 +176,7 @@ class Order(Base):
     
     # Relationships
     supplier: Mapped[Supplier] = relationship("Supplier")
+    quote: Mapped[Optional[Quote]] = relationship("Quote")
     items: Mapped[list[OrderItem]] = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
 
 

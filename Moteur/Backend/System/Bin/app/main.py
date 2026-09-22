@@ -69,6 +69,21 @@ def _ensure_part_geometry_columns():
         print(f"[DB MIGRATION WARN] Vérification colonnes parts : {err}")
 
 
+def _ensure_order_quote_column():
+    """Ajoute la colonne quote_id à la table orders si absente (sans casser SQLite)."""
+    from sqlalchemy import text
+    try:
+        with engine.connect() as conn:
+            res = conn.execute(text("PRAGMA table_info(orders)")).fetchall()
+            existing_cols = {row[1] for row in res}
+            if existing_cols and "quote_id" not in existing_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN quote_id INTEGER REFERENCES quotes(id)"))
+                print("[DB MIGRATION] Colonne 'quote_id' ajoutée à 'orders'.")
+                conn.commit()
+    except Exception as err:
+        print(f"[DB MIGRATION WARN] Vérification colonne orders.quote_id : {err}")
+
+
 def run_db_migrations():
     """
     Ensure database tables exist on startup.
@@ -86,6 +101,7 @@ def run_db_migrations():
         # Fast, non-blocking: only creates tables that don't exist yet
         Base.metadata.create_all(bind=engine)
         _ensure_part_geometry_columns()
+        _ensure_order_quote_column()
         print("[OK] Tables DB et colonnes géométriques vérifiées/créées via SQLAlchemy.")
     except Exception as e:
         print(f"[DB ERROR] Impossible de verifier/creer les tables : {e}")
