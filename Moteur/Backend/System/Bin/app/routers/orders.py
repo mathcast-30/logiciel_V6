@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from app.db.database import get_db
-from app.models import Order, OrderItem, OrderStatus, Supplier, Material, Stock
+from app.models import Order, OrderItem, OrderStatus, Supplier, Material, Stock, SupplierMaterial
 from app.schemas import orders as schemas
 
 router = APIRouter()
@@ -86,24 +86,25 @@ def receive_order(order_id: int, db: Session = Depends(get_db)):
         
     # Update stock
     for item in order.items:
-        # Check if stock exists or create new
-        # For simplicity, we create a new stock line or update generic
-        # Ideally, we should add specific stock items.
-        
-        # Determine dimensions from Material info if not present?
-        # Supplier offers usually link to a Material which has default dimensions or we assume full sheets.
         material = db.query(Material).filter(Material.id == item.material_id).first()
         if not material:
             continue
-            
-        # Add to stock
-        # We assume "quantity" in order item is number of sheets/units
+
+        # Determine dimensions from SupplierMaterial or fallback to standard panel dimensions
+        sup_mat = db.query(SupplierMaterial).filter(
+            SupplierMaterial.material_id == material.id,
+            SupplierMaterial.supplier_id == order.supplier_id
+        ).first()
+        
+        width = (sup_mat.width if sup_mat and sup_mat.width else 2500.0)
+        height = (sup_mat.height if sup_mat and sup_mat.height else 1220.0)
+
         new_stock = Stock(
             material_id=material.id,
-            width=material.width if material.width else 2500, # Fallback
-            height=material.height if material.height else 1220,
+            width=width,
+            height=height,
             quantity=int(item.quantity),
-            label=f"Cmd #{order.id} - {order.supplier.name}"
+            label=f"Cmd #{order.id} - {order.supplier.name if order.supplier else 'Fournisseur'}"
         )
         db.add(new_stock)
         
