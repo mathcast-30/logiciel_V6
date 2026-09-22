@@ -14,7 +14,8 @@ import {
     Wrench,
     FileUp,
     TrendingUp,
-    FolderArchive
+    FolderArchive,
+    Package
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { UnitConverter } from '../Tools/UnitConverter';
@@ -27,6 +28,7 @@ const navItems = [
     { path: '/clients', icon: Users2, label: 'Clients' },
     { path: '/stock', icon: Warehouse, label: 'Matériaux & Stock' },
     { path: '/hardware', icon: Wrench, label: 'Quincaillerie' },
+    { path: '/orders', icon: Package, label: 'Commandes' },
     { path: '/optimize', icon: Scissors, label: 'Optimisation' },
     { path: '/library', icon: Library, label: 'Bibliothèque' },
     { path: '/file-explorer', icon: FolderArchive, label: 'Fichiers' },

@@ -18,6 +18,7 @@ import Quotes from './pages/Quotes';
 import { Management } from './pages/Management/Management';
 import { LibraryPage as Library } from './pages/Library';
 import { HardwarePage } from './pages/Hardware';
+import { Orders } from './pages/Orders';
 import { StepImport } from './pages/StepImport';
 import { FileExplorer } from './pages/FileExplorer';
 
@@ -93,6 +94,7 @@ function AppContent() {
                 <Route path="/import-step" element={<ProtectedRoute requiredRoles={['operateur', 'chef', 'admin']}><StepImport /></ProtectedRoute>} />
                 <Route path="/optimize" element={<ProtectedRoute requiredRoles={['operateur', 'chef', 'admin']}><Optimize /></ProtectedRoute>} />
                 <Route path="/stock" element={<ProtectedRoute requiredRoles={['chef', 'admin']}><Stock /></ProtectedRoute>} />
+                <Route path="/orders" element={<ProtectedRoute requiredRoles={['chef', 'admin']}><Orders /></ProtectedRoute>} />
                 <Route path="/hardware" element={<ProtectedRoute requiredRoles={['chef', 'admin']}><HardwarePage /></ProtectedRoute>} />
                 <Route path="/clients" element={<ProtectedRoute requiredRoles={['chef', 'admin']}><Clients /></ProtectedRoute>} />
                 <Route path="/clients/:id" element={<ProtectedRoute requiredRoles={['chef', 'admin']}><ClientDetails /></ProtectedRoute>} />
