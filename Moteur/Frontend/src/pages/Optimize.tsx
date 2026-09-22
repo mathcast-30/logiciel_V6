@@ -610,6 +610,19 @@ export function Optimize() {
         }
     };
 
+    const saveHardwareCostToProject = async () => {
+        if (selectedProjectIds.length !== 1) return;
+        const total = hardwareResults.reduce((acc, hw) => acc + hw.total_cost, 0);
+        if (total <= 0) return;
+        try {
+            await api.post(`/projects/${selectedProjectIds[0]}/hardware-cost`, { hardware_cost: total });
+            const projectName = projects.find(p => p.id === selectedProjectIds[0])?.name || `#${selectedProjectIds[0]}`;
+            toast.success(`${total.toFixed(2)} € de quincaillerie ajoutés au coût estimé du projet « ${projectName} »`);
+        } catch {
+            toast.error("Erreur lors de la sauvegarde du coût");
+        }
+    };
+
     const toggleExportFormat = (format: string) => {
         setSettings(prev => ({
             ...prev,
@@ -1129,6 +1142,26 @@ export function Optimize() {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                            {/* Total + Save button */}
+                            <div className="mt-4 pt-4 border-t border-indigo-100 dark:border-indigo-900/30 flex items-center justify-between">
+                                <div>
+                                    <span className="text-xs text-slate-400">Coût total quincaillerie&nbsp;</span>
+                                    <span className="font-black text-lg text-indigo-700 dark:text-indigo-300">
+                                        {hardwareResults.reduce((acc, hw) => acc + hw.total_cost, 0).toFixed(2)} €
+                                    </span>
+                                </div>
+                                {selectedProjectIds.length === 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={saveHardwareCostToProject}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-all shadow-md shadow-indigo-200/40 dark:shadow-none"
+                                        title="Intégrer le coût quincaillerie au coût estimé du projet"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                        Intégrer au coût du projet
+                                    </button>
+                                )}
                             </div>
                         </div>
                     )}

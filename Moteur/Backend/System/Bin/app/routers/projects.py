@@ -166,6 +166,38 @@ def delete_project(project_id: int, db: Session = Depends(get_db)):
     return {"message": "Project deleted"}
 
 
+@router.post("/{project_id}/hardware-cost", response_model=Project)
+def add_hardware_cost_to_project(
+    project_id: int,
+    hardware_cost: float = Body(..., embed=True, description="Coût quincaillerie calculé à ajouter à estimated_cost"),
+    db: Session = Depends(get_db)
+):
+    """
+    Ajoute le coût de quincaillerie calculé au coût estimé du projet.
+
+    Ce endpoint utilise une logique **additive** : le `hardware_cost` fourni est
+    ajouté à l'`estimated_cost` existant du projet. Cela évite d'écraser le coût
+    matière déjà calculé par l'optimiseur.
+
+    Exemple d'appel :
+    ```json
+    POST /api/projects/42/hardware-cost
+    { "hardware_cost": 125.50 }
+    ```
+    """
+    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if hardware_cost < 0:
+        raise HTTPException(status_code=400, detail="hardware_cost doit être positif ou nul")
+
+    project.estimated_cost = (project.estimated_cost or 0.0) + hardware_cost
+    db.commit()
+    db.refresh(project)
+    return project
+
+
 @router.put("/{project_id}/status", response_model=Project)
 def update_project_status(
     project_id: int, 
