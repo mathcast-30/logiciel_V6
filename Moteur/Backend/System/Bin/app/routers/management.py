@@ -46,7 +46,32 @@ def get_management_overview(db: Session = Depends(get_db)):
         # K-metric avg
         # Simplification: get avg of k_metric where k_metric is not null
         k_metric_avg = db.query(func.avg(OptimizationResult.k_metric)).filter(OptimizationResult.k_metric.isnot(None)).scalar() or 0.0
-        k_metric_trend = 0.0 # Mocked
+
+        # K-metric trend: compare last 30 days vs previous 30 days
+        now = datetime.utcnow()
+        from datetime import timedelta
+        period_end = now
+        period_mid = now - timedelta(days=30)
+        period_start = now - timedelta(days=60)
+
+        avg_recent = db.query(func.avg(OptimizationResult.k_metric)).filter(
+            OptimizationResult.k_metric.isnot(None),
+            OptimizationResult.created_at >= period_mid,
+            OptimizationResult.created_at < period_end
+        ).scalar()
+
+        avg_previous = db.query(func.avg(OptimizationResult.k_metric)).filter(
+            OptimizationResult.k_metric.isnot(None),
+            OptimizationResult.created_at >= period_start,
+            OptimizationResult.created_at < period_mid
+        ).scalar()
+
+        if avg_recent is not None and avg_previous is not None and avg_previous > 0:
+            # Positive = improvement (higher k_metric is better)
+            k_metric_trend = round((float(avg_recent) - float(avg_previous)) * 100, 2)
+        else:
+            # Insufficient data for trend
+            k_metric_trend = 0.0
         
         # Stock critical count
         # Simplification: assume quantity <= 5 is critical
