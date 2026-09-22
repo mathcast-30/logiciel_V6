@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { FileText, Plus, Download, Trash2, Search, User, Briefcase } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { FileText, Plus, Download, Trash2, Search, User, Briefcase, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../components/UI/ConfirmDialog';
 import { QuoteService, type Quote, type QuoteItem } from '../services/quoteService';
@@ -10,6 +10,7 @@ import { OptimizeService, type MaterialResult } from '../services/optimizeServic
 
 const Quotes: React.FC = () => {
     const location = useLocation();
+    const navigate = useNavigate();
     const [quotes, setQuotes] = useState<Quote[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
@@ -195,6 +196,26 @@ const Quotes: React.FC = () => {
         });
     };
 
+    const handleConvertToOrder = (quote: Quote) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Convertir en commande',
+            message: `Convertir le devis ${quote.number} en commande fournisseur ? Une commande DRAFT sera créée avec les matériaux correspondants.`,
+            type: 'info',
+            onConfirm: async () => {
+                try {
+                    const order = await QuoteService.convertToOrder(quote.id);
+                    toast.success(`Commande #${order.id} créée depuis le devis ${quote.number}`);
+                    navigate('/orders');
+                } catch (err: unknown) {
+                    const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+                        || 'Erreur lors de la conversion';
+                    toast.error(msg);
+                }
+            }
+        });
+    };
+
     const getClientName = (id: number) => clients.find(c => c.id === id)?.name || 'Client inconnu';
     const getProjectName = (id?: number) => id ? projects.find(p => p.id === id)?.name : undefined;
 
@@ -310,6 +331,16 @@ const Quotes: React.FC = () => {
                                         <p className="font-bold text-lg text-slate-800 dark:text-emerald-400">{quote.total_ttc.toFixed(2)} €</p>
                                     </div>
                                     <div className="flex gap-2">
+                                        {quote.status === 'accepted' && (
+                                            <button
+                                                onClick={() => handleConvertToOrder(quote)}
+                                                className="p-2 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
+                                                title="Convertir en commande"
+                                                aria-label="Convertir en commande"
+                                            >
+                                                <ShoppingCart className="h-5 w-5" />
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => handleDownload(quote)}
                                             className="p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-colors"

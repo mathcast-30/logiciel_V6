@@ -77,5 +77,12 @@ export const QuoteService = {
 
     delete: async (id: number): Promise<void> => {
         await api.delete(`/quotes/${id}`);
+    },
+
+    convertToOrder: async (quoteId: number, supplierId?: number): Promise<{ id: number }> => {
+        const params: Record<string, number> = {};
+        if (supplierId) params.supplier_id = supplierId;
+        const response = await api.post<{ id: number }>(`/quotes/${quoteId}/convert-to-order`, null, { params });
+        return response.data;
     }
 };
